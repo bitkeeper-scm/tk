@@ -1,4 +1,9 @@
 2003-10-06  Joe English  <jenglish@users.sourceforge.net>
+	* library/text.tcl, doc/text.n:  Text widget binding for 
+	Control-v is now Mac-only, since it conflicts with standard 
+	<<Paste>> binding on other platforms.  [Bug #605277]
+
+2003-10-06  Joe English  <jenglish@users.sourceforge.net>
 	* generic/tkStyle.c: Fix double-free in style engine [Bug #798211]
 
 2003-10-06  Jeff Hobbs  <jeffh@ActiveState.com>
@@ -9,6 +14,9 @@
 	does not build with --enable-symbols.
 
 2003-10-06  Don Porter	<dgp@users.sourceforge.net>
+
+        * doc/ConfigWidg.3:     Removed reference to Tk_Offset from the
+        NAME section to resolve mkLinks conflict with SetOptions.3 [Bug 404197]
 
 	* unix/configure.in:	 Reconfigured to use $TCL_PREFIX as the
 	default value of --prefix, and also added warning when a TK_PREFIX
@@ -24,6 +32,7 @@
 	verify that's what we have.  [Bug 749088]
 
 	* unix/configure:	autoconf (2.57)
+	* unix/mkLinks:		make mklinks
 
 2003-10-03  Pat Thoyts  <patthoyts@users.sourceforge.net>
 
