@@ -1,3 +1,11 @@
+2000-07-17  Eric Melski  <ericm@scriptics.com>
+
+	* library/bgerror.tcl: Fixed a typo in one of the bgerror dialog
+	label.
+
+	* library/msgs/it.msg: Italian message catalog, from Paolo
+	Brutti. [RFE: 6012].
+
 2000-07-07  Eric Melski  <ericm@ajubasolutions.com>
 
 	* library/msgs/el.msg: Greek message catalog, from George Petasis.
