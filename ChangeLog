@@ -1,13 +1,20 @@
+2002-10-10  Peter Spjuth  <peter.spjuth@space.se>
+
+	* tests/grid.test:
+	* generic/tkGrid.c: The grid size was not updated properly
+	when removing a widget from a grid. [Bug #621241] (forssen)
+	
 2002-10-10  Jeff Hobbs  <jeffh@ActiveState.com>
 
 	* tests/canvPs.test: tests for canvas embedded window ps generation
 	* generic/tkCanvWind.c (CanvasPsWindow): removed dead code loop.
 	* generic/tkCanvas.h: moved TkColormapData struct to tkCanvPs.c
 	* generic/tkCanvPs.c (TkImageGetColor): corrected bogus use of
-	TkColormapData on Windows.  Non-separated data may need correction
-	as well.
+	TkColormapData on Windows (Windows now requires RGB pixel data
+	from image).
 	* win/tkWinImage.c (XGetImage, XGetImageZPixmap): added support
-	for generating ps for embedded windows on canvases.
+	for generating ps for embedded widgets on canvases on Windows,
+	tested for 8, 16, 24 and 32-bit depths (XGetImageZPixmap not used).
 
 	* library/tk.tcl: simplified the adding of extra <ISO_Left_Tab>
 	and <hpBackTab> events to <<PrevWindow>>.
