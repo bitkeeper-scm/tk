@@ -22,10 +22,16 @@
 
 /*
  * A couple of simple definitions to make code a bit more self-explaining.
+ *
+ * For the assignments of Mod1==alt==command and Mod2==meta==option, see also
+ * tkMacOSXMouseEvent.c.
  */
 
 #define LATIN1_MAX       255
 #define MAC_KEYCODE_MAX  0x7F
+#define MAC_KEYCODE_MASK 0x7F
+#define ALT_MASK         Mod1Mask
+#define OPTION_MASK      Mod2Mask
 
 
 /*
@@ -101,11 +107,16 @@ static Tcl_HashTable keycodeTable;      /* keyArray hashed by keycode value. */
 static Tcl_HashTable vkeyTable;         /* virtualkeyArray hashed by virtual
                                          * keycode value. */
 
+static int latin1Table[LATIN1_MAX+1];   /* Reverse mapping table for
+                                         * controls, ASCII and Latin-1.  */
+
 /*
  * Prototypes for static functions used in this file.
  */
 
 static void     InitKeyMaps (void);
+static void     InitLatin1Table(Display *display);
+static int      XKeysymToMacKeycode(Display *display, KeySym keysym);
 
 
 /*
@@ -148,6 +159,80 @@ InitKeyMaps()
         Tcl_SetHashValue(hPtr, kPtr->keysym);
     }
     initialized = 1;
+}
+
+/*
+ *----------------------------------------------------------------------
+ *
+ * InitLatin1Table --
+ *
+ *      Creates a simple table to be used for mapping from keysyms to
+ *      keycodes.  Always needs to be called before using latin1Table,
+ *      because the keyboard layout may have changed, and than the table must
+ *      be re-computed.
+ *
+ * Results:
+ *      None.
+ *
+ * Side effects:
+ *      Sets the global latin1Table.
+ *
+ *----------------------------------------------------------------------
+ */
+
+static void
+InitLatin1Table(
+    Display *display)
+{
+    static Boolean initialized = false;
+    static SInt16 lastKeyLayoutID = -1;
+
+    SInt16 keyScript;
+    SInt16 keyLayoutID;
+
+    keyScript = GetScriptManagerVariable(smKeyScript);
+    keyLayoutID = GetScriptVariable(keyScript,smScriptKeys);
+
+    if (!initialized || (lastKeyLayoutID != keyLayoutID)) {
+        int keycode;
+        KeySym keysym;
+        int state;
+        int modifiers;
+
+        initialized = true;
+        memset(latin1Table, 0, sizeof(latin1Table));
+        
+        /*
+         * In the common X11 implementations, a keymap has four columns
+         * "plain", "Shift", "Mode_switch" and "Mode_switch + Shift".  We
+         * don't use "Mode_switch", but we use "Option" instead.  (This is
+         * similar to Apple's X11 implementation, where "Mode_switch" is used
+         * as an alias for "Option".)
+         *
+         * So here we go through all 4 columns of the keymap and find all
+         * Latin-1 compatible keycodes.  We go through the columns
+         * back-to-front from the more exotic columns to the more simple, so
+         * that simple keycode-modifier combinations are preferred in the
+         * resulting table.
+         */
+
+        for (state = 3; state >= 0; state--) {
+            modifiers = 0;
+            if (state & 1) {
+                modifiers |= shiftKey;
+            }
+            if (state & 2) {
+                modifiers |= optionKey;
+            }
+
+            for (keycode = 0; keycode <= MAC_KEYCODE_MAX; keycode++) {
+                keysym = XKeycodeToKeysym(display,keycode,state);
+                if (keysym <= LATIN1_MAX) {
+                    latin1Table[keysym] = keycode | modifiers;
+                }
+            }
+        }
+    }
 }
 
 /*
@@ -220,12 +305,15 @@ XKeycodeToKeysym(
     }
 
     /* 
-     * Add in the Mac modifier flag for shift.
+     * Add in the Mac modifier flags for shift and option.
      */
 
     newKeycode = virtualKey;
     if (index & 1) {
         newKeycode |= shiftKey;
+    }
+    if (index & 2) {
+        newKeycode |= optionKey;
     }
 
     newChar = 0;
@@ -295,6 +383,8 @@ XGetModifierMapping(
     Display* display)
 { 
     XModifierKeymap * modmap;
+
+    (void) display; /*unused*/
 
     /*
      * MacOSX doesn't use the key codes for the modifiers for anything, and
@@ -369,6 +459,70 @@ XStringToKeysym(
 /*
  *----------------------------------------------------------------------
  *
+ * XKeysymToMacKeycode --
+ *
+ *      An internal function like XKeysymToKeycode but only generating the
+ *      Mac specific keycode plus the modifiers Shift and Option.
+ *
+ * Results:
+ *      A Mac keycode with the actual keycode in the low byte and Mac-style
+ *      modifier bits in the high byte.
+ *
+ * Side effects:
+ *      None.
+ *
+ *----------------------------------------------------------------------
+ */
+
+static int
+XKeysymToMacKeycode(
+    Display *display,
+    KeySym keysym)
+{
+    if (keysym <= LATIN1_MAX) {
+
+        /*
+         * Handle keysyms in the Latin-1 range where keysym and Unicode
+         * character code point are the same.
+         */
+
+        InitLatin1Table(display);
+        return latin1Table[keysym];
+
+    } else {
+
+        /*
+         * Handle special keys from our exception tables.  Don't mind if this
+         * is slow, neither the test suite nor [event generate] need to be
+         * optimized (we hope).
+         */
+
+        KeyInfo *kPtr;
+                
+        for (kPtr = keyArray; kPtr->keycode != 0; kPtr++) {
+            if (kPtr->keysym == keysym) {
+                return kPtr->keycode;
+            }
+        }
+        for (kPtr = virtualkeyArray; kPtr->keycode != 0; kPtr++) {
+            if (kPtr->keysym == keysym) {
+                return kPtr->keycode;
+            }
+        }
+
+        /*
+         * For other keysyms (not Latin-1 and not special keys), we'd need a
+         * generic keysym-to-unicode table.  We don't have that, so we give
+         * up here.
+         */
+
+        return 0;
+    }
+}
+
+/*
+ *----------------------------------------------------------------------
+ *
  * XKeysymToKeycode --
  *
  *      The function XKeysymToKeycode takes an X11 keysym and converts it
@@ -376,8 +530,8 @@ XStringToKeysym(
  *      not used anywhere in the core.
  *
  * Results:
- *      A 32 bit keycode with the the mac keycode but without modifiers in
- *      the higher 16 bits and the keysym in the lower 16 bits.
+ *      A 32 bit keycode with the the mac keycode (without modifiers) in the
+ *      higher 16 bits and the keysym in the lower 16 bits.
  *
  * Side effects:
  *      None.
@@ -390,9 +544,18 @@ XKeysymToKeycode(
     Display* display,
     KeySym keysym)
 {
-    KeyCode keycode = 0;
-    char virtualKeyCode = 0;
+    int macKeycode = XKeysymToMacKeycode(display, keysym);
     
+    /*
+     * See also TkpSetKeycodeAndState.
+     */
+
+    return (0xFFFF & keysym) | ((macKeycode & MAC_KEYCODE_MASK) << 16);
+}
+
+/*
+NB: Keep this commented code for a moment for reference.
+
     if ((keysym >= XK_space) && (XK_asciitilde)) {
         if (keysym == 'a') {
             virtualKeyCode = 0x00;
@@ -414,7 +577,7 @@ XKeysymToKeycode(
     }
 
     return keycode;
-}
+*/
 
 /*
  *----------------------------------------------------------------------
@@ -443,34 +606,28 @@ TkpSetKeycodeAndState(
     KeySym keysym,
     XEvent *eventPtr)
 {
-    Display *display;
-    int state;
-    KeyCode keycode;
-    
-    display = Tk_Display(tkwin);
-    
     if (keysym == NoSymbol) {
-        keycode = 0;
+        eventPtr->xkey.keycode = 0;
+        eventPtr->xkey.state = 0;
     } else {
-        keycode = XKeysymToKeycode(display, keysym);
-    }
-    if (keycode != 0) {
-        for (state = 0; state < 4; state++) {
-            if (XKeycodeToKeysym(display, keycode, state) == keysym) {
-                if (state & 1) {
-                    eventPtr->xkey.state |= ShiftMask;
-                }
-                if (state & 2) {
-                    TkDisplay *dispPtr;
+        Display *display = Tk_Display(tkwin);
+        int macKeycode = XKeysymToMacKeycode(display, keysym);
 
-                    dispPtr = ((TkWindow *) tkwin)->dispPtr; 
-                    eventPtr->xkey.state |= dispPtr->modeModMask;
-                }
-                break;
-            }
+        /*
+         * See also XKeysymToKeycode.
+         */
+
+        eventPtr->xkey.keycode =
+            (0xFFFF & keysym) | ((macKeycode & MAC_KEYCODE_MASK) << 16);
+
+        eventPtr->xkey.state = 0;
+        if (shiftKey & macKeycode) {
+            eventPtr->xkey.state |= ShiftMask;
+        }
+        if (optionKey & macKeycode) {
+            eventPtr->xkey.state |= OPTION_MASK;
         }
     }
-    eventPtr->xkey.keycode = keycode;
 }
 
 /*
@@ -549,12 +706,12 @@ TkpGetKeySym(
      */
 
     index = 0;
-    if (eventPtr->xkey.state & dispPtr->modeModMask) {
+    if (eventPtr->xkey.state & OPTION_MASK) {
         index |= 2;
     }
     if ((eventPtr->xkey.state & ShiftMask)
-            || ((dispPtr->lockUsage != LU_IGNORE)
-                    && (eventPtr->xkey.state & LockMask))) {
+            || (/* (dispPtr->lockUsage != LU_IGNORE)
+                   && */ (eventPtr->xkey.state & LockMask))) {
         index |= 1;
     }
 
@@ -571,10 +728,16 @@ TkpGetKeySym(
      */
 
     if ((index & 1) && !(eventPtr->xkey.state & ShiftMask)
-            && (dispPtr->lockUsage == LU_CAPS)) {
-        if (!(((sym >= XK_A) && (sym <= XK_Z))
-                    || ((sym >= XK_Agrave) && (sym <= XK_Odiaeresis))
-                    || ((sym >= XK_Ooblique) && (sym <= XK_Thorn)))) {
+            /*&& (dispPtr->lockUsage == LU_CAPS)*/ ) {
+
+        /*
+         * FIXME: Keysyms are only identical to Unicode for ASCII and
+         * Latin-1, so we can't use Tcl_UniCharIsUpper() for keysyms outside
+         * that range.  This may be a serious problem here.
+         */
+
+        if ((sym == NoSymbol) || (sym > LATIN1_MAX)
+                || !Tcl_UniCharIsUpper(sym)) {
             index &= ~1;
             sym = XKeycodeToKeysym(dispPtr->display, eventPtr->xkey.keycode,
                     index);
@@ -616,109 +779,30 @@ TkpInitKeymapInfo(
     TkDisplay *dispPtr)         /* Display for which to recompute keymap
                                  * information. */
 {
-    XModifierKeymap *modMapPtr;
-    KeyCode *codePtr;
-    KeySym keysym;
-    int count, i, j, max, arraySize;
-#define KEYCODE_ARRAY_SIZE 20
-
     dispPtr->bindInfoStale = 0;
-    modMapPtr = XGetModifierMapping(dispPtr->display);
 
     /*
-     * Check the keycodes associated with the Lock modifier.  If any of them
-     * is associated with the XK_Shift_Lock modifier, then Lock has to be
-     * interpreted as Shift Lock, not Caps Lock.
+     * Behaviours that are variable on X11 are defined constant on MacOSX.
+     * lockUsage is only used above in TkpGetKeySym(), nowhere else
+     * currently.  There is no offical "Mode_switch" key.
      */
 
-    dispPtr->lockUsage = LU_IGNORE;
-    codePtr = modMapPtr->modifiermap + modMapPtr->max_keypermod*LockMapIndex;
-    for (count = modMapPtr->max_keypermod; count > 0; count--, codePtr++) {
-        if (*codePtr == 0) {
-            continue;
-        }
-        keysym = XKeycodeToKeysym(dispPtr->display, *codePtr, 0);
-        if (keysym == XK_Shift_Lock) {
-            dispPtr->lockUsage = LU_SHIFT;
-            break;
-        }
-        if (keysym == XK_Caps_Lock) {
-            dispPtr->lockUsage = LU_CAPS;
-            break;
-        }
-    }
-
-    /*
-     * Look through the keycodes associated with modifiers to see if the the
-     * "mode switch", "meta", or "alt" keysyms are associated with any
-     * modifiers.  If so, remember their modifier mask bits.
-     */
-
+    dispPtr->lockUsage = LU_CAPS;
     dispPtr->modeModMask = 0;
-    dispPtr->metaModMask = 0;
-    dispPtr->altModMask = 0;
-    codePtr = modMapPtr->modifiermap;
-    max = 8*modMapPtr->max_keypermod;
-    for (i = 0; i < max; i++, codePtr++) {
-        if (*codePtr == 0) {
-            continue;
-        }
-        keysym = XKeycodeToKeysym(dispPtr->display, *codePtr, 0);
-        if (keysym == XK_Mode_switch) {
-            dispPtr->modeModMask |= ShiftMask << (i/modMapPtr->max_keypermod);
-        }
-        if ((keysym == XK_Meta_L) || (keysym == XK_Meta_R)) {
-            dispPtr->metaModMask |= ShiftMask << (i/modMapPtr->max_keypermod);
-        }
-        if ((keysym == XK_Alt_L) || (keysym == XK_Alt_R)) {
-            dispPtr->altModMask |= ShiftMask << (i/modMapPtr->max_keypermod);
-        }
-    }
+    dispPtr->altModMask = ALT_MASK;
+    dispPtr->metaModMask = OPTION_MASK;
 
     /*
-     * Create an array of the keycodes for all modifier keys.
+     * MacOSX doesn't use the keycodes for the modifiers for anything, and we
+     * don't generate them either (the keycodes actually given in the
+     * simulated modifier events are bogus).  So there is no modifier map.
+     * If we ever want to simulate real modifier keycodes, the list will be
+     * constant in the Carbon implementation.
      */
 
     if (dispPtr->modKeyCodes != NULL) {
         ckfree((char *) dispPtr->modKeyCodes);
     }
     dispPtr->numModKeyCodes = 0;
-    arraySize = KEYCODE_ARRAY_SIZE;
-    dispPtr->modKeyCodes = (KeyCode *) ckalloc((unsigned)
-            (KEYCODE_ARRAY_SIZE * sizeof(KeyCode)));
-    for (i = 0, codePtr = modMapPtr->modifiermap; i < max; i++, codePtr++) {
-        if (*codePtr == 0) {
-            continue;
-        }
-
-        /*
-         * Make sure that the keycode isn't already in the array.
-         */
-
-        for (j = 0; j < dispPtr->numModKeyCodes; j++) {
-            if (dispPtr->modKeyCodes[j] == *codePtr) {
-                goto nextModCode;
-            }
-        }
-        if (dispPtr->numModKeyCodes >= arraySize) {
-            KeyCode *new;
-
-            /*
-             * Ran out of space in the array; grow it.
-             */
-
-            arraySize *= 2;
-            new = (KeyCode *) ckalloc((unsigned)
-                    (arraySize * sizeof(KeyCode)));
-            memcpy((VOID *) new, (VOID *) dispPtr->modKeyCodes,
-                    (dispPtr->numModKeyCodes * sizeof(KeyCode)));
-            ckfree((char *) dispPtr->modKeyCodes);
-            dispPtr->modKeyCodes = new;
-        }
-        dispPtr->modKeyCodes[dispPtr->numModKeyCodes] = *codePtr;
-        dispPtr->numModKeyCodes++;
-    nextModCode:
-        continue;
-    }
-    XFreeModifiermap(modMapPtr);
+    dispPtr->modKeyCodes = NULL;
 }
