@@ -450,7 +450,10 @@ AC_DEFUN(SC_ENABLE_THREADS, [
 	# Does the pthread-implementation provide
 	# 'pthread_attr_setstacksize' ?
 
+	ac_saved_libs=$LIBS
+	LIBS="$LIBS $THREADS_LIBS"
 	AC_CHECK_FUNCS(pthread_attr_setstacksize)
+	LIBS=$ac_saved_libs
 	AC_CHECK_FUNCS(readdir_r)
     else
 	TCL_THREADS=0
@@ -952,7 +955,9 @@ dnl AC_CHECK_TOOL(AR, ar)
 	    ;;
 	HP-UX-*.11.*)
 	    # Use updated header definitions where possible
-	    AC_DEFINE(_XOPEN_SOURCE_EXTENDED)
+	    AC_DEFINE(_XOPEN_SOURCE)          # Use the XOPEN network library
+	    AC_DEFINE(_XOPEN_SOURCE_EXTENDED) # Use the XOPEN network library
+	    LIBS="$LIBS -lxnet"               # Use the XOPEN network library
 
 	    SHLIB_SUFFIX=".sl"
 	    AC_CHECK_LIB(dld, shl_load, tcl_ok=yes, tcl_ok=no)
