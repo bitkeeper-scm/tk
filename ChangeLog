@@ -1,3 +1,7 @@
+2004-02-25  Benjamin Riefenstahl  <Benjamin.Riefenstahl@epost.de>
+
+	* library/demos/widget (addFormattedText): Correct off-by-one error.
+
 2004-02-23  Daniel Steffen  <das@users.sourceforge.net>
 
 	* macosx/Makefile: ensure that xcodebuild will use the
@@ -22,6 +26,11 @@
 	* tests/grid.test:
 	* generic/tkGrid.c: Fixed a bug in grid geometry calculations for
 	a shrinking grid. [Bug 899246]
+
+2004-02-17  Benjamin Riefenstahl  <Benjamin.Riefenstahl@epost.de>
+
+	* macosx/tkMacOSXKeyboard.c (TkpInitKeymapInfo): Don't make <Alt> and
+	<Meta> synonyms for <Command> and <Option> for now.
 
 2004-02-17  Jeff Hobbs  <jeffh@ActiveState.com>
 
