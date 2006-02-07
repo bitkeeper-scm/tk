@@ -41,10 +41,10 @@ typedef struct {
  * Forward declarations...
  */
 
+static void		FinishedWithFont(UnixFtFont *fontPtr);
 static XftFont *	GetFont(UnixFtFont *fontPtr, FcChar32 ucs4);
 static UnixFtFont *	InitFont(Tk_Window tkwin, FcPattern *pattern,
 			    UnixFtFont *fontPtr);
-static void		FinishedWithFont(UnixFtFont *fontPtr);
 
 /*
  * Package initialization:
@@ -56,15 +56,15 @@ static void		FinishedWithFont(UnixFtFont *fontPtr);
 #define TCL_CFGVAL_ENCODING "ascii"
 #endif
 
-static Tcl_Config cfg[] = {
-    { "fontsystem", 	"xft" },
-    { 0,0 }
-};
-
 void
 TkpFontPkgInit(
     TkMainInfo *mainPtr)	/* The application being created. */
 {
+    static Tcl_Config cfg[] = {
+	{ "fontsystem", "xft" },
+	{ 0,0 }
+    };
+
     Tcl_RegisterConfig(mainPtr->interp, "tk", cfg, TCL_CFGVAL_ENCODING);
 }
 
@@ -130,9 +130,6 @@ InitFont(
     if (!fontPtr) {
 	fontPtr = (UnixFtFont *) ckalloc(sizeof(UnixFtFont));
     }
-    if (!fontPtr) {
-	return NULL; /* Never called? */
-    }
 
     FcConfigSubstitute(0, pattern, FcMatchPattern);
     XftDefaultSubstitute(Tk_Display(tkwin), Tk_ScreenNumber(tkwin), pattern);
@@ -142,7 +139,6 @@ InitFont(
      */
 
     set = FcFontSort(0, pattern, FcTrue, &charset, &result);
-
     if (!set) {
 	FcPatternDestroy(pattern);
 	ckfree((char *) fontPtr);
@@ -151,15 +147,7 @@ InitFont(
 
     fontPtr->charset = charset;
     fontPtr->pattern = pattern;
-
     fontPtr->faces = (UnixFtFace *) ckalloc(set->nfont * sizeof(UnixFtFace));
-    if (!fontPtr->faces) {
-	FcFontSetDestroy(set);
-	FcCharSetDestroy(charset);
-	FcPatternDestroy(pattern);
-	ckfree((char *) fontPtr);
-	return NULL;
-    }
     fontPtr->nfaces = set->nfont;
 
     /*
@@ -263,8 +251,8 @@ FinishedWithFont(
     Tk_ErrorHandler handler;
     int i;
 
-    handler = Tk_CreateErrorHandler(display, -1, -1, -1,
-	    NULL, (ClientData) NULL);
+    handler = Tk_CreateErrorHandler(display, -1, -1, -1, NULL,
+	    (ClientData) NULL);
     for (i = 0; i < fontPtr->nfaces; i++) {
 	if (fontPtr->faces[i].ftFont) {
 	    XftFontClose(fontPtr->display, fontPtr->faces[i].ftFont);
@@ -312,7 +300,7 @@ TkpGetNativeFont(
     }
     return &fontPtr->font;
 }
-
+
 TkFont *
 TkpGetFontFromAttributes(
     TkFont *tkFontPtr,		/* If non-NULL, store the information in this
@@ -619,8 +607,8 @@ Tk_DrawChars(
     } else {
 	Tk_ErrorHandler handler;
 
-        handler = Tk_CreateErrorHandler(display, -1, -1, -1,
-		NULL, (ClientData) NULL);
+	handler = Tk_CreateErrorHandler(display, -1, -1, -1, NULL,
+		(ClientData) NULL);
 	XftDrawChange(fontPtr->ftDraw, drawable);
 	fontPtr->drawable = drawable;
 	Tk_DeleteErrorHandler(handler);
