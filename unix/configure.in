@@ -3,7 +3,7 @@ dnl	This file is an input file used by the GNU "autoconf" program to
 dnl	generate the file "configure", which is run during Tk installation
 dnl	to configure the system for the local environment.
 #
-# RCS: @(#) $Id$
+# RCS: @(#) $Id: configure.in 1.112 2006/01/11 18:36:44-08:00 ob@dirac.local $
 
 AC_INIT([tk],[8.5])
 AC_PREREQ(2.59)
@@ -66,6 +66,11 @@ TK_SRC_DIR=`cd $srcdir/..; pwd`
 #------------------------------------------------------------------------
 
 SC_CONFIG_MANPAGES
+
+#------------------------------------------------------------------------
+# Try to find BitKeeper source repo
+#------------------------------------------------------------------------
+SC_PATH_BK
 
 #------------------------------------------------------------------------
 # Standard compiler checks

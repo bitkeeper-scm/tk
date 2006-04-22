@@ -5,7 +5,7 @@
 # "autoconf" program (constructs like "@foo@" will get replaced in the
 # actual Makefile.
 #
-# RCS: @(#) $Id$
+# RCS: @(#) $Id: Makefile.in 1.110 2006/01/11 18:55:04-08:00 ob@dirac.local $
 
 # Current Tk version;  used in various names.
 
@@ -254,7 +254,7 @@ TCL_STUB_FLAGS		= @TCL_STUB_FLAGS@
 # Libraries to use when linking.  This definition is determined by the
 # configure script.
 LIBS = @LIBS@ $(X11_LIB_SWITCHES) @TCL_LIBS@
-WISH_LIBS = $(TCL_LIB_SPEC) @LIBS@ $(X11_LIB_SWITCHES) @TCL_LIBS@ @EXTRA_WISH_LIBS@
+WISH_LIBS = $(TCL_LIB_SPEC) @LIBS@ $(X11_LIB_SWITCHES) @TCL_LIBS@ ${BK_LIBS} @EXTRA_WISH_LIBS@
 
 # The symbols below provide support for dynamic loading and shared
 # libraries.  See configure.in for a description of what the
@@ -303,6 +303,9 @@ BMAP_DIR		= $(TOP_DIR)/bitmaps
 TOOL_DIR		= @TCL_SRC_DIR@/tools
 MAC_OSX_DIR		= $(TOP_DIR)/macosx
 XLIB_DIR		= $(TOP_DIR)/xlib
+BK_DIR			= @BK_DIR@
+@BK_LIBS@
+BK_LIBS			?= $(BK_DIR)/tomcrypt/libtomcrypt.a
 
 #----------------------------------------------------------------
 # The information below should be usable as is.  The configure
