@@ -1,3 +1,13 @@
+2006-07-21  Daniel Steffen  <das@users.sourceforge.net>
+
+	* generic/tkBind.c (TkBindInit): for REDO_KEYSYM_LOOKUP, change
+	keysym-to-string mapping hash to use first name in ks_names.h instead of
+	last (if there are multiple possibilities), e.g. "F11" instead of "L1".
+
+	* macosx/tkMacOSXKeyboard.c (TkpGetKeySym): correct keysyms for pure
+	modifier key presses [Bugs 700311, 1525905]; correct keysym for Enter
+	key; add keysyms for new NumLock and Fn modifiers (added 2005-08-09).
+
 2006-07-20  Daniel Steffen  <das@users.sourceforge.net>
 
 	* macosx/tkMacOSXWm.c (WmAttributesCmd, WmIconbitmapCmd): add support
@@ -23,7 +33,7 @@
 
 	* macosx/tkMacOSXEvent.h:      standardize MAC_OS_X_VERSION_MAX_ALLOWED
 	* macosx/tkMacOSXMenu.c:       checks per QA1316, ensure define can be
-	* macosx/tkMacOSXMenubutton.c: overriden on command line (from default
+	* macosx/tkMacOSXMenubutton.c: overridden on command line (from default
 	* macosx/tkMacOSXMenus.c:      of current OS version).
 	* macosx/tkMacOSXMouseEvent.c:
 	* macosx/tkMacOSXWm.c:
