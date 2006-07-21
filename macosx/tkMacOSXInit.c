@@ -255,6 +255,19 @@ TkpInit(interp)
 		}
 	    }
 	}
+#ifdef	BK
+	ProcessSerialNumber	psn;
+
+	/* Make sure the window comes up in the front of the calling
+	 * application. The problem this solves is that if you exec
+	 * the wish shell that is inside the application bundle, the
+	 * new window appears _behind_ the calling application.
+	 * We solve this by making Tk move its processID to the
+	 * front of the Z-axis stacking order that the Window Server
+	 * keeps.
+	 */
+	if (GetCurrentProcess(&psn) >= 0) SetFrontProcess(&psn);
+#endif
 #if MAC_OSX_TK_USE_CPS_SPI
 	/*
 	 * If we are loaded into an executable that is not a bundled application,
