@@ -5418,8 +5418,8 @@ _ACEOF
 	    SHLIB_SUFFIX=".so"
 	    DL_OBJS="tclLoadDl.o"
 	    DL_LIBS=""
-	    CC_SEARCH_FLAGS='-Wl,-rpath,${LIB_RUNTIME_DIR}'
-	    LD_SEARCH_FLAGS='-rpath ${LIB_RUNTIME_DIR}'
+	    CC_SEARCH_FLAGS=""
+	    LD_SEARCH_FLAGS=""
 	    echo "$as_me:$LINENO: checking for ELF" >&5
 echo $ECHO_N "checking for ELF... $ECHO_C" >&6
 if test "${tcl_cv_ld_elf+set}" = set; then
@@ -9268,7 +9268,7 @@ fi;
             XFT_CFLAGS=`pkg-config --cflags xft 2>/dev/null` || enable_xft="no"
             XFT_LIBS=`pkg-config --libs xft 2>/dev/null` || enable_xft="no"
         fi
-        if test "$enable_xft" == "no" ; then
+        if test "$enable_xft" = "no" ; then
             { echo "$as_me:$LINENO: WARNING: Can't find xft configuration" >&5
 echo "$as_me: WARNING: Can't find xft configuration" >&2;}
         fi

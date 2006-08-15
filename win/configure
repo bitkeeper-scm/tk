@@ -309,7 +309,7 @@ ac_includes_default="\
 # include <unistd.h>
 #endif"
 
-ac_subst_vars='SHELL PATH_SEPARATOR PACKAGE_NAME PACKAGE_TARNAME PACKAGE_VERSION PACKAGE_STRING PACKAGE_BUGREPORT exec_prefix prefix program_transform_name bindir sbindir libexecdir datadir sysconfdir sharedstatedir localstatedir libdir includedir oldincludedir infodir mandir build_alias host_alias target_alias DEFS ECHO_C ECHO_N ECHO_T LIBS CC CFLAGS LDFLAGS CPPFLAGS ac_ct_CC EXEEXT OBJEXT AR RANLIB RC SET_MAKE TCL_THREADS CYGPATH CELIB_DIR DL_LIBS CFLAGS_DEBUG CFLAGS_OPTIMIZE CFLAGS_WARNING CPP EGREP MAN2TCLFLAGS CFLAGS_DEFAULT LDFLAGS_DEFAULT TCL_VERSION TCL_BIN_DIR TCL_SRC_DIR TCL_LIB_FILE TCL_LIB_FLAG TCL_LIB_SPEC TCL_STUB_LIB_FILE TCL_STUB_LIB_FLAG TCL_STUB_LIB_SPEC TCL_DEFS BUILD_TCLSH TCLSH_PROG TK_WIN_VERSION MACHINE TK_VERSION TK_MAJOR_VERSION TK_MINOR_VERSION TK_PATCH_LEVEL TK_DBGX TK_LIB_FILE TK_DLL_FILE TK_STUB_LIB_FILE TK_STUB_LIB_FLAG TK_BUILD_STUB_LIB_SPEC TK_SRC_DIR TK_BIN_DIR TCL_MAJOR_VERSION TCL_MINOR_VERSION TCL_PATCH_LEVEL TCL_DBGX CFG_TK_SHARED_LIB_SUFFIX CFG_TK_UNSHARED_LIB_SUFFIX CFG_TK_EXPORT_FILE_SUFFIX TK_SHARED_BUILD DEPARG EXTRA_CFLAGS STLIB_LD SHLIB_LD SHLIB_LD_LIBS SHLIB_CFLAGS SHLIB_SUFFIX CC_OBJNAME CC_EXENAME LDFLAGS_DEBUG LDFLAGS_OPTIMIZE LDFLAGS_CONSOLE LDFLAGS_WINDOW RC_OUT RC_TYPE RC_INCLUDE RC_DEFINE RC_DEFINES TK_RES RES LIBS_GUI DLLSUFFIX LIBPREFIX LIBSUFFIX EXESUFFIX LIBRARIES MAKE_LIB POST_MAKE_LIB MAKE_DLL MAKE_EXE TK_LIB_FLAG TK_LIB_SPEC TK_BUILD_LIB_SPEC TK_STUB_LIB_SPEC TK_STUB_LIB_PATH TK_BUILD_STUB_LIB_PATH TK_CC_SEARCH_FLAGS TK_LD_SEARCH_FLAGS LIBOBJS LTLIBOBJS'
+ac_subst_vars='SHELL PATH_SEPARATOR PACKAGE_NAME PACKAGE_TARNAME PACKAGE_VERSION PACKAGE_STRING PACKAGE_BUGREPORT exec_prefix prefix program_transform_name bindir sbindir libexecdir datadir sysconfdir sharedstatedir localstatedir libdir includedir oldincludedir infodir mandir build_alias host_alias target_alias DEFS ECHO_C ECHO_N ECHO_T LIBS CC CFLAGS LDFLAGS CPPFLAGS ac_ct_CC EXEEXT OBJEXT AR RANLIB RC SET_MAKE BK_DIR BK_HDRS BK_SRCS BK_OBJS BK_INCLUDES BK_LIBS TCL_THREADS CYGPATH CELIB_DIR DL_LIBS CFLAGS_DEBUG CFLAGS_OPTIMIZE CFLAGS_WARNING CPP EGREP MAN2TCLFLAGS CFLAGS_DEFAULT LDFLAGS_DEFAULT TCL_VERSION TCL_BIN_DIR TCL_SRC_DIR TCL_LIB_FILE TCL_LIB_FLAG TCL_LIB_SPEC TCL_STUB_LIB_FILE TCL_STUB_LIB_FLAG TCL_STUB_LIB_SPEC TCL_DEFS BUILD_TCLSH TCLSH_PROG TK_WIN_VERSION MACHINE TK_VERSION TK_MAJOR_VERSION TK_MINOR_VERSION TK_PATCH_LEVEL TK_DBGX TK_LIB_FILE TK_DLL_FILE TK_STUB_LIB_FILE TK_STUB_LIB_FLAG TK_BUILD_STUB_LIB_SPEC TK_SRC_DIR TK_BIN_DIR TCL_MAJOR_VERSION TCL_MINOR_VERSION TCL_PATCH_LEVEL TCL_DBGX CFG_TK_SHARED_LIB_SUFFIX CFG_TK_UNSHARED_LIB_SUFFIX CFG_TK_EXPORT_FILE_SUFFIX TK_SHARED_BUILD DEPARG EXTRA_CFLAGS STLIB_LD SHLIB_LD SHLIB_LD_LIBS SHLIB_CFLAGS SHLIB_SUFFIX CC_OBJNAME CC_EXENAME LDFLAGS_DEBUG LDFLAGS_OPTIMIZE LDFLAGS_CONSOLE LDFLAGS_WINDOW RC_OUT RC_TYPE RC_INCLUDE RC_DEFINE RC_DEFINES TK_RES RES LIBS_GUI DLLSUFFIX LIBPREFIX LIBSUFFIX EXESUFFIX LIBRARIES MAKE_LIB POST_MAKE_LIB MAKE_DLL MAKE_EXE TK_LIB_FLAG TK_LIB_SPEC TK_BUILD_LIB_SPEC TK_STUB_LIB_SPEC TK_STUB_LIB_PATH TK_BUILD_STUB_LIB_PATH TK_CC_SEARCH_FLAGS TK_LD_SEARCH_FLAGS LIBOBJS LTLIBOBJS'
 ac_subst_files=''
 
 # Initialize some variables set by options.
@@ -849,6 +849,7 @@ Optional Features:
 Optional Packages:
   --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
   --without-PACKAGE       do not use PACKAGE (same as --with-PACKAGE=no)
+  --with-bk              directory containing BK source
   --with-celib=DIR        use Windows/CE support library from DIR
   --with-tcl=DIR          use Tcl 8.5 binaries from DIR
 
@@ -2513,6 +2514,77 @@ fi
 #--------------------------------------------------------------------
 
 
+
+
+#------------------------------------------------------------------------
+# Try to find BitKeeper source repo
+#------------------------------------------------------------------------
+
+	if test x"${no_bk}" = x ; then
+		# reset no_bk in case something fails
+		no_bk=true
+
+# Check whether --with-bk or --without-bk was given.
+if test "${with_bk+set}" = set; then
+  withval="$with_bk"
+  with_bksource=${withval}
+fi;
+		echo "$as_me:$LINENO: checking for BK source tree" >&5
+echo $ECHO_N "checking for BK source tree... $ECHO_C" >&6
+		if test x"${with_bksource}" != x ; then
+			if test -f "${with_bksource}/src/tclkey.h" ; then
+				ac_cv_c_bksource=`(cd ${with_bksource}/src ; pwd)`
+			else
+				{ { echo "$as_me:$LINENO: error: ${with_bksource}/src directory does not contain tclkey.h" >&5
+echo "$as_me: error: ${with_bksource}/src directory does not contain tclkey.h" >&2;}
+   { (exit 1); exit 1; }; }
+			fi
+		fi
+
+		# Now check for it in the parent directory
+		if test x"${ac_cv_c_bksource}" = x ; then
+			if test -f "../../../../tclkey.h" ; then
+				ac_cv_c_bksource=`(cd ../../../.. ; pwd)`
+			fi
+		fi
+
+		if test x"${ac_cv_c_bksource}" = x ; then
+			BK_DIR=""
+			BK_HDRS="BK_HDRS = "
+			BK_SRCS="BK_SRCS = "
+			BK_OBJS="BK_OBJS = "
+			BK_LIBS="BK_LIBS = "
+			BK_INCLUDES=""
+
+
+
+
+
+
+			{ echo "$as_me:$LINENO: WARNING: Can't find BK source tree encryption disabled" >&5
+echo "$as_me: WARNING: Can't find BK source tree encryption disabled" >&2;}
+		else
+			no_bk=
+			BK_DIR=${ac_cv_c_bksource}
+			BK_HDRS=""
+			BK_SRCS=""
+			BK_OBJS=""
+			BK_LIBS=""
+			BK_INCLUDES="-I$BK_DIR"
+			cat >>confdefs.h <<\_ACEOF
+#define BK 1
+_ACEOF
+
+
+
+
+
+
+
+			echo "$as_me:$LINENO: result: found $BK_DIR" >&5
+echo "${ECHO_T}found $BK_DIR" >&6
+		fi
+	fi
 
 
 #--------------------------------------------------------------------
@@ -4735,6 +4807,12 @@ s,@AR@,$AR,;t t
 s,@RANLIB@,$RANLIB,;t t
 s,@RC@,$RC,;t t
 s,@SET_MAKE@,$SET_MAKE,;t t
+s,@BK_DIR@,$BK_DIR,;t t
+s,@BK_HDRS@,$BK_HDRS,;t t
+s,@BK_SRCS@,$BK_SRCS,;t t
+s,@BK_OBJS@,$BK_OBJS,;t t
+s,@BK_INCLUDES@,$BK_INCLUDES,;t t
+s,@BK_LIBS@,$BK_LIBS,;t t
 s,@TCL_THREADS@,$TCL_THREADS,;t t
 s,@CYGPATH@,$CYGPATH,;t t
 s,@CELIB_DIR@,$CELIB_DIR,;t t

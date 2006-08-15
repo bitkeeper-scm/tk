@@ -305,7 +305,9 @@ MAC_OSX_DIR		= $(TOP_DIR)/macosx
 XLIB_DIR		= $(TOP_DIR)/xlib
 BK_DIR			= @BK_DIR@
 @BK_LIBS@
-BK_LIBS			?= $(BK_DIR)/tomcrypt/libtomcrypt.a
+ifndef BK_LIBS
+BK_LIBS			= $(BK_DIR)/tomcrypt/libtomcrypt.a
+endif
 
 #----------------------------------------------------------------
 # The information below should be usable as is.  The configure
