@@ -1,3 +1,31 @@
+2006-08-16  Jeff Hobbs  <jeffh@ActiveState.com>
+
+	* macosx/tkMacOSXWm.c (WmAttributesCmd): correct OS X result for
+	[wm attributes $top].
+
+2006-07-25  Daniel Steffen  <das@users.sourceforge.net>
+
+	* macosx/tkMacOSXKeyEvent.c (TkMacOSXProcessKeyboardEvent): handle key
+	shortcut for kHICommandQuit in the same way as other application menu
+	item key shortcuts. [Bug 1516950]
+
+2006-07-24  Daniel Steffen  <das@users.sourceforge.net>
+
+	* macosx/tkMacOSXWm.c (TkWmMapWindow): fix incorrect values of wmInfo
+	parentWidth/Height for toplevels by recalculating them once the window
+	is mapped (i.e. once the window&structure sizes are known). [Bug 1358663]
+	(ParseGeometry): sync with ParseGeometry in tkUnixWm.c/tkWinWm.c.
+
+2006-07-21  Daniel Steffen  <das@users.sourceforge.net>
+
+	* generic/tkBind.c (TkBindInit): for REDO_KEYSYM_LOOKUP, change
+	keysym-to-string mapping hash to use first name in ks_names.h instead of
+	last (if there are multiple possibilities), e.g. "F11" instead of "L1".
+
+	* macosx/tkMacOSXKeyboard.c (TkpGetKeySym): correct keysyms for pure
+	modifier key presses [Bugs 700311, 1525905]; correct keysym for Enter
+	key; add keysyms for new NumLock and Fn modifiers (added 2005-08-09).
+
 2006-07-20  Daniel Steffen  <das@users.sourceforge.net>
 
 	* macosx/tkMacOSXWm.c (WmAttributesCmd, WmIconbitmapCmd): add support
@@ -23,7 +51,7 @@
 
 	* macosx/tkMacOSXEvent.h:      standardize MAC_OS_X_VERSION_MAX_ALLOWED
 	* macosx/tkMacOSXMenu.c:       checks per QA1316, ensure define can be
-	* macosx/tkMacOSXMenubutton.c: overriden on command line (from default
+	* macosx/tkMacOSXMenubutton.c: overridden on command line (from default
 	* macosx/tkMacOSXMenus.c:      of current OS version).
 	* macosx/tkMacOSXMouseEvent.c:
 	* macosx/tkMacOSXWm.c:
@@ -169,7 +197,7 @@
 
 2006-05-04  Don Porter  <dgp@users.sourceforge.net>
 
-	* README:		Bump version number to 8.5a4
+	* README:		Bump version number to 8.5a5
 	* generic/tk.h:
 	* unix/configure.in:
 	* unix/tk.spec:
