@@ -1,3 +1,121 @@
+2006-09-22  Andreas Kupries  <andreask@activestate.com>
+
+	* generic/tkConsole.c: TIP #268 update regarding registered package
+	* generic/tkMain.c:    version, now using full patchlevel instead of
+	* generic/tkWindow.c:  major.minor
+	* library/tk.tcl:
+	* unix/configure:
+	* unix/Makefile.in:
+	* unix/tcl.m4:
+	* win/configure:
+	* win/Makefile.in:
+	* win/makefile.vc:
+	* win/rules.vc:
+	* win/tcl.m4:
+
+2006-09-20  Jeff Hobbs  <jeffh@ActiveState.com>
+
+	* win/tkWinMenu.c (TkpPostMenu): disable menu animation in menus
+	with images to avoid clipping bug.  [Bug 1329198]
+
+2006-09-21  Donal K. Fellows  <dkf@users.sf.net>
+
+	* generic/tkImgBmap.c (ImgBmapPostscript): Change 0 to NULL, since
+	they are not interchangable on all platforms in all circumstances.
+	[Tcl Bug 1562528]
+
+2006-09-11  Daniel Steffen  <das@users.sourceforge.net>
+
+	* macosx/tkMacOSXWm.c (TkMacOSXMakeRealWindowExist): revert part of
+	2006-05-16 change that had set overrideredirect windows to not become
+	activated by the window manager, as this prevented interaction with
+	native widgets in such windows [Bug 1472624]; apply changes to carbon
+	window attributes even if native window has already been created.
+
+	* macosx/tkMacOSXKeyEvent.c (TkMacOSXProcessKeyboardEvent): fix app
+	* macosx/tkMacOSXMenu.c (DrawMenuBarWhenIdle): menu item key shortcuts
+	* macosx/tkMacOSXInt.h: when custom ".apple" menu is installed.
+
+	* library/demos/widget: on TkAqua, don't install file menu with single
+	quit menu item, as the application menu already has a quit item.
+
+	* macosx/tkMacOSXColor.c: fix building on Mac OS X 10.2.
+
+2006-09-10  Daniel Steffen  <das@users.sourceforge.net>
+
+	* macosx/tkMacOSXColor.c (TkSetMacColor, TkpGetColor): use AppearanceMgr
+	* macosx/tkMacOSXDefault.h: to retrieve platform std colors for text
+	* macosx/tkMacOSXPort.h:    selections, add "systemHighlightSecondary"
+	color name for standard color of inactive selections, use this color as
+	default for text widget -inactiveselectbackground to implement platform
+	standard look for inactive text selections.
+
+	* library/text.tcl (aqua): remove focus bindings to set selection color.
+
+	* generic/tkTextBTree.c (TkTextIsElided): on TkAqua, don't show inactive
+	* generic/tkTextDisp.c (GetStyle):        text selection when text
+	                                          widget is in disabled state.
+
+	* generic/tkEntry.c (DisplayEntry): change default TkAqua selection
+	* macosx/tkMacOSXDefault.h:         relief to "flat" (platform std).
+
+	* generic/tkText.c (CreateWidget): fix bug leading to default text
+	selection relief string DEF_TEXT_SELECT_RELIEF being ignored.
+
+	* macosx/tkMacOSXMouseEvent.c (TkMacOSXProcessMouseEvent): allow mouse
+	event delivery to background windows with kWindowNoActivatesAttribute
+	(e.g. overrideredirect windows), as these never come to the foreground
+	they would never receive any mouse events otherwise. [Bug 1472624]
+
+	* macosx/tkMacOSXWindowEvent.c (TkMacOSXGenerateFocusEvent): do not
+	send focus events to any windows with kWindowNoActivatesAttribute.
+
+	* macosx/tkMacOSXXStubs.c (XQueryColor, XQueryColors): implement basic
+	XColor computation from pixel values, enough to make tkImg's window.c
+	happy, fixes img::window failures reported on tcl-mac.
+
+	* macosx/tkMacOSXMenu.c (DrawMenuEntryLabel): fix leak. [Bug 1554672]
+
+	* macosx/GNUmakefile: workaround bug in 'cp -pRH' on Darwin 6 and
+	earlier, fixes 'make embedded' failure reported on tcl-mac; fix error
+	from 'make deploy' with same build tree as previous 'make embedded'.
+
+	* macosx/Wish.xcodeproj/project.pbxproj: add new tclUnixCompat.c file.
+
+	* macosx/tkMacOSXEntry.c (TkpDrawEntryBorderAndFocus): fix typo.
+
+	* unix/tcl.m4: sync with tcl/unix/tcl.m4.
+	* unix/configure: autoconf-2.59
+
+2006-09-06  Jeff Hobbs  <jeffh@ActiveState.com>
+
+	* generic/tkEntry.c:   move hard-coded ALWAYS_SHOW_SELECTION
+	* generic/tkInt.h:     control of entry/text selection display
+	* generic/tkText.c:    based on focus to the Tcl level,
+	* generic/tkWindow.c:  controlled by ::tk::AlwaysShowSelection
+	* library/tk.tcl:      (boolean, private).  [Bug 1553691]
+	* macosx/tkMacOSXDefault.h:
+	* unix/tkUnixDefault.h:
+	* unix/tkUnixPort.h:
+	* win/tkWinDefault.h:
+
+2006-08-30  Jeff Hobbs  <jeffh@ActiveState.com>
+
+	* win/tkWinKey.c: Add WM_UNICHAR window message support (used by
+	* win/tkWinX.c:   virtual keyboard apps). [Bug 1518677] (petasis)
+
+2006-08-24  Daniel Steffen  <das@users.sourceforge.net>
+
+	* macosx/tkMacOSXScrlbr.c (UpdateControlValues): set native scrollbar
+	control bounds only once all size adjustments have been computed.
+	Fixes issue with grow icon obscuring scrollbar reported on tcl-mac.
+
+2006-08-21  Daniel Steffen  <das@users.sourceforge.net>
+
+	* macosx/tkMacOSXCarbonEvents.c (CarbonTimerProc): avoid starving main
+	event loop: limit the number of tcl events processed per invocation.
+	Fixes bug reported on tcl-mac by Kevan Hashemi.
+
 2006-08-18  Donal K. Fellows  <donal.k.fellows@manchester.ac.uk>
 
 	* tests/text.test (text-25.15): Added test suggested by Sam
@@ -18,7 +136,7 @@
 
 	* macosx/Wish.xcodeproj/project.pbxproj: switch native release targets
 	to use DWARF with dSYM, Xcode 3.0 changes.
-	* macosx/README: updates for x86_64 and Xcode 2.3.
+	* macosx/README: updates for x86_64 support in Tcl.
 
 	* macosx/tkMacOSXInit.c (TkpInit): when available, use public
 	TransformProcessType() API instead of CPSEnableForegroundOperation()

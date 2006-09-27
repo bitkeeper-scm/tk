@@ -13,14 +13,14 @@
 # of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 
 # Insist on running with compatible versions of Tcl and Tk.
-package require -exact Tk 8.5
-package require -exact Tcl 8.5
+package require -exact Tk  8.5a5
+package require -exact Tcl 8.5a5
 
 # Create a ::tk namespace
 namespace eval ::tk {
     # Set up the msgcat commands
     namespace eval msgcat {
-	namespace export mc mcmax        
+	namespace export mc mcmax
         if {[interp issafe] || [catch {package require msgcat}]} {
             # The msgcat package is not available.  Supply our own
             # minimal replacement.
@@ -340,7 +340,7 @@ if {![llength [info command tk_chooseDirectory]]} {
 	return [::tk::dialog::file::chooseDir:: {expand}$args]
     }
 }
-	
+
 #----------------------------------------------------------------------
 # Define the set of common virtual events.
 #----------------------------------------------------------------------
@@ -365,6 +365,9 @@ switch -- [tk windowingsystem] {
 
 	trace add variable ::tk_strictMotif write ::tk::EventMotifBindings
 	set ::tk_strictMotif $::tk_strictMotif
+	# On unix, we want to always display entry/text selection,
+	# regardless of which window has focus
+	set ::tk::AlwaysShowSelection 1
     }
     "win32" {
 	event add <<Cut>> <Control-Key-x> <Shift-Key-Delete>

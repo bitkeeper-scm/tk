@@ -1602,15 +1602,14 @@ DisplayEntry(
     baseY = (Tk_Height(tkwin) + fm.ascent - fm.descent) / 2;
 
     /*
-     * On Windows and Mac, we need to hide the selection whenever we don't
-     * have the focus.
+     * Hide the selection whenever we don't have the focus, unless we
+     * always want to show selection.
      */
-
-#ifdef ALWAYS_SHOW_SELECTION
-    showSelection = 1;
-#else
-    showSelection = (entryPtr->flags & GOT_FOCUS);
-#endif
+    if (TkpAlwaysShowSelection(entryPtr->tkwin)) {
+	showSelection = 1;
+    } else {
+	showSelection = (entryPtr->flags & GOT_FOCUS);
+    }
 
     /*
      * Draw the background in three layers. From bottom to top the layers are:
@@ -1648,7 +1647,13 @@ DisplayEntry(
 		    baseY - fm.ascent - entryPtr->selBorderWidth,
 		    (selEndX - selStartX) + 2*entryPtr->selBorderWidth,
 		    (fm.ascent + fm.descent) + 2*entryPtr->selBorderWidth,
-		    entryPtr->selBorderWidth, TK_RELIEF_RAISED);
+		    entryPtr->selBorderWidth, 
+#ifndef MAC_OSX_TK
+		    TK_RELIEF_RAISED
+#else
+		    MAC_OSX_ENTRY_SELECT_RELIEF
+#endif
+		    );
 	}
     }
 
@@ -2790,15 +2795,15 @@ EntryLostSelection(
      * On Windows and Mac systems, we want to remember the selection for the
      * next time the focus enters the window. On Unix, we need to clear the
      * selection since it is always visible.
+     * This is controlled by ::tk::AlwaysShowSelection.
      */
 
-#ifdef ALWAYS_SHOW_SELECTION
-    if ((entryPtr->selectFirst >= 0) && entryPtr->exportSelection) {
+    if (TkpAlwaysShowSelection(entryPtr->tkwin)
+	    && (entryPtr->selectFirst >= 0) && entryPtr->exportSelection) {
 	entryPtr->selectFirst = -1;
 	entryPtr->selectLast = -1;
 	EventuallyRedraw(entryPtr);
     }
-#endif
 }
 
 /*

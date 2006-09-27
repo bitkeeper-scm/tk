@@ -888,8 +888,17 @@ TkCreateMainWindow(interp, screenName, baseName)
     mainPtr->optionRootPtr = NULL;
     Tcl_InitHashTable(&mainPtr->imageTable, TCL_STRING_KEYS);
     mainPtr->strictMotif = 0;
+    mainPtr->alwaysShowSelection = 0;
     if (Tcl_LinkVar(interp, "tk_strictMotif", (char *) &mainPtr->strictMotif,
 	    TCL_LINK_BOOLEAN) != TCL_OK) {
+	Tcl_ResetResult(interp);
+    }
+    if (Tcl_CreateNamespace(interp, "::tk", NULL, NULL) == NULL) {
+	Tcl_ResetResult(interp);
+    }
+    if (Tcl_LinkVar(interp, "::tk::AlwaysShowSelection",
+		(char *) &mainPtr->alwaysShowSelection,
+		TCL_LINK_BOOLEAN) != TCL_OK) {
 	Tcl_ResetResult(interp);
     }
     mainPtr->nextPtr = tsdPtr->mainWindowList;
@@ -947,7 +956,7 @@ TkCreateMainWindow(interp, screenName, baseName)
      */
 
     Tcl_SetVar(interp, "tk_patchLevel", TK_PATCH_LEVEL, TCL_GLOBAL_ONLY);
-    Tcl_SetVar(interp, "tk_version", TK_VERSION, TCL_GLOBAL_ONLY);
+    Tcl_SetVar(interp, "tk_version",    TK_VERSION,     TCL_GLOBAL_ONLY);
 
     tsdPtr->numMainWindows++;
     return tkwin;
@@ -1502,6 +1511,8 @@ Tk_DestroyWindow(tkwin)
 			TkDeadAppCmd, (ClientData) NULL,
 			(void (*) _ANSI_ARGS_((ClientData))) NULL);
 		Tcl_UnlinkVar(winPtr->mainPtr->interp, "tk_strictMotif");
+                Tcl_UnlinkVar(winPtr->mainPtr->interp,
+			"::tk::AlwaysShowSelection");
 	    }
 
 	    Tcl_DeleteHashTable(&winPtr->mainPtr->nameTable);
@@ -2652,6 +2663,34 @@ Tk_GetNumMainWindows()
 /*
  *----------------------------------------------------------------------
  *
+ * TkpAlwaysShowSelection --
+ *
+ *	Indicates whether text/entry widgets should always display
+ *	their selection, regardless of window focus.
+ *
+ * Results:
+ *	The return value is 1 if always showing the selection has been
+ *	requested for tkwin's application by setting the
+ *	::tk::AlwaysShowSelection variable in its interpreter to a true value.
+ *	0 is returned if it has a false value.
+ *
+ * Side effects:
+ *	None.
+ *
+ *----------------------------------------------------------------------
+ */
+
+int
+TkpAlwaysShowSelection(tkwin)
+    Tk_Window tkwin;			/* Window whose application is
+					 * to be checked. */
+{
+    return ((TkWindow *) tkwin)->mainPtr->alwaysShowSelection;
+}
+
+/*
+ *----------------------------------------------------------------------
+ *
  * DeleteWindowsExitProc --
  *
  *	This function is invoked as an exit handler. It deletes all of the
@@ -2866,7 +2905,7 @@ Initialize(interp)
      * only an issue when Tk is loaded dynamically.
      */
 
-    if (Tcl_InitStubs(interp, TCL_VERSION, 1) == NULL) {
+    if (Tcl_InitStubs(interp, TCL_PATCH_LEVEL, 1) == NULL) {
 	return TCL_ERROR;
     }
 
@@ -3096,7 +3135,7 @@ Initialize(interp)
 	geometry = NULL;
     }
 
-    if (Tcl_PkgRequire(interp, "Tcl", TCL_VERSION, 1) == NULL) {
+    if (Tcl_PkgRequire(interp, "Tcl", TCL_PATCH_LEVEL, 1) == NULL) {
 	code = TCL_ERROR;
 	goto done;
     }
@@ -3105,7 +3144,7 @@ Initialize(interp)
      * Provide Tk and its stub table.
      */
 
-    code = Tcl_PkgProvideEx(interp, "Tk", TK_VERSION, (ClientData) &tkStubs);
+    code = Tcl_PkgProvideEx(interp, "Tk", TK_PATCH_LEVEL, (ClientData) &tkStubs);
     if (code != TCL_OK) {
 	goto done;
     } else {
