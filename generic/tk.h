@@ -30,7 +30,7 @@ extern "C" {
  * When version numbers change here, you must also go into the following files
  * and update the version numbers:
  *
- * library/tk.tcl	(only if Major.minor changes, not patchlevel)
+ * library/tk.tcl	(2 LOC patch)
  * unix/configure.in	(2 LOC Major, 2 LOC minor, 1 LOC patch)
  * win/configure.in	(as above)
  * README		(sections 0 and 1)
@@ -50,10 +50,10 @@ extern "C" {
 #define TK_MAJOR_VERSION	8
 #define TK_MINOR_VERSION	5
 #define TK_RELEASE_LEVEL	TCL_ALPHA_RELEASE
-#define TK_RELEASE_SERIAL	5
+#define TK_RELEASE_SERIAL	6
 
 #define TK_VERSION		"8.5"
-#define TK_PATCH_LEVEL		"8.5a5"
+#define TK_PATCH_LEVEL		"8.5a6"
 
 #ifndef _TCL
 #   include <tcl.h>
@@ -1494,7 +1494,7 @@ typedef struct Tk_ElementSpec {
     Tk_MainEx(argc, argv, proc, Tcl_CreateInterp())
 
 CONST char *		Tk_InitStubs _ANSI_ARGS_((Tcl_Interp *interp,
-			    char *version, int exact));
+			    CONST char *version, int exact));
 
 #ifndef USE_TK_STUBS
 

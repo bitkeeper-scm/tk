@@ -1,4 +1,18 @@
+2006-10-23  Don Porter  <dgp@users.sourceforge.net>
+
+	* README:		Bump version number to 8.5a6
+	* generic/tk.h:
+	* library/tk.tcl:
+	* unix/configure.in:
+	* unix/tk.spec:
+	* win/configure.in:
+
+	* unix/configure:	autoconf-2.59
+	* win/configure:
+
 2006-10-19  Pat Thoyts  <patthoyts@users.sourceforge.net>
+
+	*** 8.5a5 TAGGED FOR RELEASE ***
 
 	* generic/tkImgBmap.c: Fixed line endings.
 	* win/makefile.vc:  Patched up build system to manage
@@ -6,8 +20,6 @@
 	* win/nmakehlp.c:   Ensure operation without Platform SDK.
 
 2006-10-18  Don Porter  <dgp@users.sourceforge.net>
-
-	*** 8.5a5 TAGGED FOR RELEASE ***
 
 	* changes:		8.5a5 release date set.
 
