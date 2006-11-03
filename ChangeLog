@@ -1,3 +1,14 @@
+2006-11-03  Pat Thoyts  <patthoyts@users.sourceforge.net>
+
+	* generic/ttk/ttkLayout.c:     We do not want to require tkInt in
+	* generic/ttk/ttkMananager.h:  all the ttk files so added the
+	* generic/ttk/ttkTheme.h:      definition of MODULE_SCOPE to 
+	* generic/ttk/ttkWinMonitor.c: ttkTheme.h Ensure everyone
+	gets to see the definition from someplace.
+
+	* library/ttk/fonts.tcl: In a safe interp there is no osVersion
+	field in tcl_platform so work around it.
+
 2006-11-02  Daniel Steffen  <das@users.sourceforge.net>
 
 	* generic/ttk/ttkBlink.c, generic/ttk/ttkButton.c:
