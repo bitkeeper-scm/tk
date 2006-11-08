@@ -118,7 +118,7 @@ XLIB_DIR		= $(ROOT_DIR)/xlib
 RC_DIR			= $(WIN_DIR)/rc
 BK_DIR			= @BK_DIR@
 @BK_LIBS@
-ifndef BK_LIBS
+ifdef BK_DIR
 BK_LIBS			= $(BK_DIR)/tomcrypt/libtomcrypt.a
 endif
 
