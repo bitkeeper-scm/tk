@@ -23,7 +23,8 @@ namespace eval ttk {
 	style configure TButton -width -11 -relief raised -shiftrelief 1
 	style configure TCheckbutton -padding "2 4"
 	style configure TRadiobutton -padding "2 4"
-	style configure TMenubutton -padding "8 4" -arrowsize 3 -relief raised
+	style configure TMenubutton \
+	    -padding "8 4" -arrowsize 3 -relief raised -anchor w
 
 	style map TButton -relief {{!disabled pressed} sunken}
 
@@ -55,6 +56,20 @@ namespace eval ttk {
 	style configure TNotebook -tabmargins {2 2 2 0}
 	style configure TNotebook.Tab -padding {3 1} -borderwidth 1
 	style map TNotebook.Tab -expand [list selected {2 2 2 0}]
+
+	# Treeview:
+	style configure Heading -font TkHeadingFont -relief raised
+	style configure Row -background SystemWindow
+	style configure Cell -background SystemWindow
+	style map Row \
+	    -background [list selected SystemHighlight] \
+	    -foreground [list selected SystemHighlightText] ;
+	style map Cell \
+	    -background [list selected SystemHighlight] \
+	    -foreground [list selected SystemHighlightText] ;
+	style map Item \
+	    -background [list selected SystemHighlight] \
+	    -foreground [list selected SystemHighlightText] ;
 
         style configure TProgressbar -borderwidth 0 -background SystemHighlight
     }

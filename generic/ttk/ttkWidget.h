@@ -1,17 +1,12 @@
 /* $Id$
  * Copyright (c) 2003, Joe English
- *
  * Helper routines for widget implementations.
- *
- * Require: ttkTheme.h.
  */
 
 #ifndef _TTKWIDGET
 #define _TTKWIDGET
 
 /* State flags for 'flags' field.
- * @@@ todo: distinguish:
- * need reconfigure, need redisplay, redisplay pending
  */
 #define WIDGET_DESTROYED	0x0001
 #define REDISPLAY_PENDING 	0x0002	/* scheduled call to RedisplayWidget */
@@ -64,7 +59,7 @@ typedef struct {
 } WidgetCommandSpec;
 
 MODULE_SCOPE int TtkWidgetEnsembleCommand(	/* Run an ensemble command */
-    WidgetCommandSpec *commands, int cmdIndex,
+    const WidgetCommandSpec *commands, int cmdIndex,
     Tcl_Interp *interp, int objc, Tcl_Obj *const objv[], void *recordPtr);
 
 /*
@@ -74,8 +69,8 @@ struct WidgetSpec_
 {
     const char 		*className;	/* Widget class name */
     size_t 		recordSize;	/* #bytes in widget record */
-    Tk_OptionSpec	*optionSpecs;	/* Option specifications */
-    WidgetCommandSpec	*commands;	/* Widget instance subcommands */
+    const Tk_OptionSpec	*optionSpecs;	/* Option specifications */
+    const WidgetCommandSpec	*commands;	/* Widget instance subcommands */
 
     /*
      * Hooks:
@@ -170,13 +165,6 @@ MODULE_SCOPE void Ttk_UntraceVariable(Ttk_TraceHandle *);
 MODULE_SCOPE int Ttk_FireTrace(Ttk_TraceHandle *);
 
 /*
- * Utility routines for managing -image option:
- */
-MODULE_SCOPE int TtkGetImageList(
-    Tcl_Interp *, WidgetCore *, Tcl_Obj *imageOption, Tk_Image **imageListPtr);
-MODULE_SCOPE void TtkFreeImageList(Tk_Image *);
-
-/*
  * Virtual events:
  */
 MODULE_SCOPE void TtkSendVirtualEvent(Tk_Window tgtWin, const char *eventName);
@@ -185,7 +173,7 @@ MODULE_SCOPE void TtkSendVirtualEvent(Tk_Window tgtWin, const char *eventName);
  * Helper routines for data accessor commands:
  */
 MODULE_SCOPE int TtkEnumerateOptions(
-    Tcl_Interp *, void *recordPtr, Tk_OptionSpec *, Tk_OptionTable, Tk_Window);
+    Tcl_Interp *, void *recordPtr, const Tk_OptionSpec *, Tk_OptionTable, Tk_Window);
 MODULE_SCOPE int TtkGetOptionValue(
     Tcl_Interp *, void *recordPtr, Tcl_Obj *optName, Tk_OptionTable, Tk_Window);
 
@@ -232,7 +220,6 @@ MODULE_SCOPE int Ttk_GetTagListFromObj(
 
 MODULE_SCOPE void Ttk_FreeTagList(void **taglist);
 
-
 /*
  * Useful widget base classes:
  */
@@ -252,9 +239,8 @@ MODULE_SCOPE const char *ttkDefaultStrings[];
 MODULE_SCOPE int TtkGetLabelAnchorFromObj(Tcl_Interp*,Tcl_Obj*,Ttk_PositionSpec *);
 
 /*
- * Package initialiation routines:
+ * Platform-specific initialization.
  */
-MODULE_SCOPE void TtkRegisterElements(Tcl_Interp *);
 
 #if defined(__WIN32__)
 #define Ttk_PlatformInit Ttk_WinPlatformInit

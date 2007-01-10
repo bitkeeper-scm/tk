@@ -4400,6 +4400,111 @@ _ACEOF
 		fi
 	    fi
 	fi
+	if test $tcl_ok = no; then
+	    # Darwin thread stacksize API
+
+for ac_func in pthread_get_stacksize_np
+do
+as_ac_var=`echo "ac_cv_func_$ac_func" | $as_tr_sh`
+echo "$as_me:$LINENO: checking for $ac_func" >&5
+echo $ECHO_N "checking for $ac_func... $ECHO_C" >&6
+if eval "test \"\${$as_ac_var+set}\" = set"; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+  cat >conftest.$ac_ext <<_ACEOF
+/* confdefs.h.  */
+_ACEOF
+cat confdefs.h >>conftest.$ac_ext
+cat >>conftest.$ac_ext <<_ACEOF
+/* end confdefs.h.  */
+/* Define $ac_func to an innocuous variant, in case <limits.h> declares $ac_func.
+   For example, HP-UX 11i <limits.h> declares gettimeofday.  */
+#define $ac_func innocuous_$ac_func
+
+/* System header to define __stub macros and hopefully few prototypes,
+    which can conflict with char $ac_func (); below.
+    Prefer <limits.h> to <assert.h> if __STDC__ is defined, since
+    <limits.h> exists even on freestanding compilers.  */
+
+#ifdef __STDC__
+# include <limits.h>
+#else
+# include <assert.h>
+#endif
+
+#undef $ac_func
+
+/* Override any gcc2 internal prototype to avoid an error.  */
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+/* We use char because int might match the return type of a gcc2
+   builtin and then its argument prototype would still apply.  */
+char $ac_func ();
+/* The GNU C library defines this for functions which it implements
+    to always fail with ENOSYS.  Some functions are actually named
+    something starting with __ and the normal name is an alias.  */
+#if defined (__stub_$ac_func) || defined (__stub___$ac_func)
+choke me
+#else
+char (*f) () = $ac_func;
+#endif
+#ifdef __cplusplus
+}
+#endif
+
+int
+main ()
+{
+return f != $ac_func;
+  ;
+  return 0;
+}
+_ACEOF
+rm -f conftest.$ac_objext conftest$ac_exeext
+if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
+  (eval $ac_link) 2>conftest.er1
+  ac_status=$?
+  grep -v '^ *+' conftest.er1 >conftest.err
+  rm -f conftest.er1
+  cat conftest.err >&5
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } &&
+	 { ac_try='test -z "$ac_c_werror_flag"
+			 || test ! -s conftest.err'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; } &&
+	 { ac_try='test -s conftest$ac_exeext'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; }; then
+  eval "$as_ac_var=yes"
+else
+  echo "$as_me: failed program was:" >&5
+sed 's/^/| /' conftest.$ac_ext >&5
+
+eval "$as_ac_var=no"
+fi
+rm -f conftest.err conftest.$ac_objext \
+      conftest$ac_exeext conftest.$ac_ext
+fi
+echo "$as_me:$LINENO: result: `eval echo '${'$as_ac_var'}'`" >&5
+echo "${ECHO_T}`eval echo '${'$as_ac_var'}'`" >&6
+if test `eval echo '${'$as_ac_var'}'` = yes; then
+  cat >>confdefs.h <<_ACEOF
+#define `echo "HAVE_$ac_func" | $as_tr_cpp` 1
+_ACEOF
+
+fi
+done
+
+	fi
 	LIBS=$ac_saved_libs
     else
 	TCL_THREADS=0
@@ -5334,7 +5439,7 @@ echo "$as_me: WARNING: 64bit mode not supported by gcc" >&2;}
 	    # get rid of the warnings.
 	    #CFLAGS_OPTIMIZE="${CFLAGS_OPTIMIZE} -D__NO_STRING_INLINES -D__NO_MATH_INLINES"
 
-	    SHLIB_LD="${CC} -shared"
+	    SHLIB_LD='${CC} -shared ${CFLAGS} ${LDFLAGS}'
 	    DL_OBJS="tclLoadDl.o"
 	    DL_LIBS="-ldl"
 	    LDFLAGS="$LDFLAGS -Wl,--export-dynamic"
@@ -5342,6 +5447,70 @@ echo "$as_me: WARNING: 64bit mode not supported by gcc" >&2;}
 	    LD_SEARCH_FLAGS=${CC_SEARCH_FLAGS}
 	    if test "`uname -m`" = "alpha" ; then
 		CFLAGS="$CFLAGS -mieee"
+	    fi
+	    if test $do64bit = yes; then
+		echo "$as_me:$LINENO: checking if compiler accepts -m64 flag" >&5
+echo $ECHO_N "checking if compiler accepts -m64 flag... $ECHO_C" >&6
+if test "${tcl_cv_cc_m64+set}" = set; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+
+		    hold_cflags=$CFLAGS
+		    CFLAGS="$CFLAGS -m64"
+		    cat >conftest.$ac_ext <<_ACEOF
+/* confdefs.h.  */
+_ACEOF
+cat confdefs.h >>conftest.$ac_ext
+cat >>conftest.$ac_ext <<_ACEOF
+/* end confdefs.h.  */
+
+int
+main ()
+{
+
+  ;
+  return 0;
+}
+_ACEOF
+rm -f conftest.$ac_objext conftest$ac_exeext
+if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
+  (eval $ac_link) 2>conftest.er1
+  ac_status=$?
+  grep -v '^ *+' conftest.er1 >conftest.err
+  rm -f conftest.er1
+  cat conftest.err >&5
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } &&
+	 { ac_try='test -z "$ac_c_werror_flag"
+			 || test ! -s conftest.err'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; } &&
+	 { ac_try='test -s conftest$ac_exeext'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; }; then
+  tcl_cv_cc_m64=yes
+else
+  echo "$as_me: failed program was:" >&5
+sed 's/^/| /' conftest.$ac_ext >&5
+
+tcl_cv_cc_m64=no
+fi
+rm -f conftest.err conftest.$ac_objext \
+      conftest$ac_exeext conftest.$ac_ext
+		    CFLAGS=$hold_cflags
+fi
+echo "$as_me:$LINENO: result: $tcl_cv_cc_m64" >&5
+echo "${ECHO_T}$tcl_cv_cc_m64" >&6
+		if test $tcl_cv_cc_m64 = yes; then
+		    CFLAGS="$CFLAGS -m64"
+		    do64bit_ok=yes
+		fi
 	    fi
 
 	    # The combo of gcc + glibc has a bug related
@@ -5546,16 +5715,136 @@ echo "${ECHO_T}$tcl_cv_ld_elf" >&6
 	    CFLAGS_OPTIMIZE="-Os"
 	    SHLIB_CFLAGS="-fno-common"
 	    if test $do64bit = yes; then
-		do64bit_ok=yes
 		case `arch` in
 		    ppc)
-			CFLAGS="$CFLAGS -arch ppc64 -mpowerpc64 -mcpu=G5";;
+			echo "$as_me:$LINENO: checking if compiler accepts -arch ppc64 flag" >&5
+echo $ECHO_N "checking if compiler accepts -arch ppc64 flag... $ECHO_C" >&6
+if test "${tcl_cv_cc_arch_ppc64+set}" = set; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+
+			    hold_cflags=$CFLAGS
+			    CFLAGS="$CFLAGS -arch ppc64 -mpowerpc64 -mcpu=G5"
+			    cat >conftest.$ac_ext <<_ACEOF
+/* confdefs.h.  */
+_ACEOF
+cat confdefs.h >>conftest.$ac_ext
+cat >>conftest.$ac_ext <<_ACEOF
+/* end confdefs.h.  */
+
+int
+main ()
+{
+
+  ;
+  return 0;
+}
+_ACEOF
+rm -f conftest.$ac_objext conftest$ac_exeext
+if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
+  (eval $ac_link) 2>conftest.er1
+  ac_status=$?
+  grep -v '^ *+' conftest.er1 >conftest.err
+  rm -f conftest.er1
+  cat conftest.err >&5
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } &&
+	 { ac_try='test -z "$ac_c_werror_flag"
+			 || test ! -s conftest.err'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; } &&
+	 { ac_try='test -s conftest$ac_exeext'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; }; then
+  tcl_cv_cc_arch_ppc64=yes
+else
+  echo "$as_me: failed program was:" >&5
+sed 's/^/| /' conftest.$ac_ext >&5
+
+tcl_cv_cc_arch_ppc64=no
+fi
+rm -f conftest.err conftest.$ac_objext \
+      conftest$ac_exeext conftest.$ac_ext
+			    CFLAGS=$hold_cflags
+fi
+echo "$as_me:$LINENO: result: $tcl_cv_cc_arch_ppc64" >&5
+echo "${ECHO_T}$tcl_cv_cc_arch_ppc64" >&6
+			if test $tcl_cv_cc_arch_ppc64 = yes; then
+			    CFLAGS="$CFLAGS -arch ppc64 -mpowerpc64 -mcpu=G5"
+			    do64bit_ok=yes
+			fi;;
 		    i386)
-			CFLAGS="$CFLAGS -arch x86_64";;
+			echo "$as_me:$LINENO: checking if compiler accepts -arch x86_64 flag" >&5
+echo $ECHO_N "checking if compiler accepts -arch x86_64 flag... $ECHO_C" >&6
+if test "${tcl_cv_cc_arch_x86_64+set}" = set; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+
+			    hold_cflags=$CFLAGS
+			    CFLAGS="$CFLAGS -arch x86_64"
+			    cat >conftest.$ac_ext <<_ACEOF
+/* confdefs.h.  */
+_ACEOF
+cat confdefs.h >>conftest.$ac_ext
+cat >>conftest.$ac_ext <<_ACEOF
+/* end confdefs.h.  */
+
+int
+main ()
+{
+
+  ;
+  return 0;
+}
+_ACEOF
+rm -f conftest.$ac_objext conftest$ac_exeext
+if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
+  (eval $ac_link) 2>conftest.er1
+  ac_status=$?
+  grep -v '^ *+' conftest.er1 >conftest.err
+  rm -f conftest.er1
+  cat conftest.err >&5
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } &&
+	 { ac_try='test -z "$ac_c_werror_flag"
+			 || test ! -s conftest.err'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; } &&
+	 { ac_try='test -s conftest$ac_exeext'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; }; then
+  tcl_cv_cc_arch_x86_64=yes
+else
+  echo "$as_me: failed program was:" >&5
+sed 's/^/| /' conftest.$ac_ext >&5
+
+tcl_cv_cc_arch_x86_64=no
+fi
+rm -f conftest.err conftest.$ac_objext \
+      conftest$ac_exeext conftest.$ac_ext
+			    CFLAGS=$hold_cflags
+fi
+echo "$as_me:$LINENO: result: $tcl_cv_cc_arch_x86_64" >&5
+echo "${ECHO_T}$tcl_cv_cc_arch_x86_64" >&6
+			if test $tcl_cv_cc_arch_x86_64 = yes; then
+			    CFLAGS="$CFLAGS -arch x86_64"
+			    do64bit_ok=yes
+			fi;;
 		    *)
 			{ echo "$as_me:$LINENO: WARNING: Don't know how enable 64-bit on architecture \`arch\`" >&5
-echo "$as_me: WARNING: Don't know how enable 64-bit on architecture \`arch\`" >&2;}
-			do64bit_ok=no;;
+echo "$as_me: WARNING: Don't know how enable 64-bit on architecture \`arch\`" >&2;};;
 		esac
 	    else
 		# Check for combined 32-bit and 64-bit fat build
@@ -5851,6 +6140,7 @@ cat >>confdefs.h <<\_ACEOF
 #define NO_COREFOUNDATION_64 1
 _ACEOF
 
+                        LDFLAGS="$LDFLAGS -Wl,-no_arch_warnings"
 		    fi
 		fi
 	    fi
@@ -9342,20 +9632,20 @@ fi;
     XFT_CFLAGS=""
     XFT_LIBS=""
     if test "$enable_xft" = "no" ; then
-        echo "$as_me:$LINENO: result: $enable_xft" >&5
+	echo "$as_me:$LINENO: result: $enable_xft" >&5
 echo "${ECHO_T}$enable_xft" >&6
     else
-        found_xft="yes"
-        XFT_CFLAGS=`xft-config --cflags 2>/dev/null` || found_xft="no"
-        XFT_LIBS=`xft-config --libs 2>/dev/null` || found_xft="no"
-        if test "$found_xft" = "no" ; then
-            found_xft=yes
-            XFT_CFLAGS=`pkg-config --cflags xft 2>/dev/null` || found_xft="no"
-            XFT_LIBS=`pkg-config --libs xft 2>/dev/null` || found_xft="no"
-        fi
+	found_xft="yes"
+			XFT_CFLAGS=`xft-config --cflags 2>/dev/null` || found_xft="no"
+	XFT_LIBS=`xft-config --libs 2>/dev/null` || found_xft="no"
+	if test "$found_xft" = "no" ; then
+	    found_xft=yes
+	    XFT_CFLAGS=`pkg-config --cflags xft 2>/dev/null` || found_xft="no"
+	    XFT_LIBS=`pkg-config --libs xft 2>/dev/null` || found_xft="no"
+	fi
 	echo "$as_me:$LINENO: result: $found_xft" >&5
 echo "${ECHO_T}$found_xft" >&6
-        if test "$found_xft" = "yes" ; then
+		if test "$found_xft" = "yes" ; then
 	    tk_oldCFlags=$CFLAGS
 	    CFLAGS="$CFLAGS $XINCLUDES $XFT_CFLAGS"
 	    tk_oldLibs=$LIBS
@@ -9412,15 +9702,15 @@ if test $ac_cv_header_X11_Xft_Xft_h = yes; then
   :
 else
 
-                found_xft=no
+		found_xft=no
 
 fi
 
 
-            CFLAGS=$tk_oldCFlags
-            LIBS=$tk_oldLibs
-        fi
-        if test "$found_xft" = "yes" ; then
+	    CFLAGS=$tk_oldCFlags
+	    LIBS=$tk_oldLibs
+	fi
+		if test "$found_xft" = "yes" ; then
 	    tk_oldCFlags=$CFLAGS
 	    CFLAGS="$CFLAGS $XINCLUDES $XFT_CFLAGS"
 	    tk_oldLibs=$LIBS
@@ -9499,30 +9789,34 @@ _ACEOF
 
 else
 
-                found_xft=no
+		found_xft=no
 
 fi
 
-            CFLAGS=$tk_oldCFlags
-            LIBS=$tk_oldLibs
-        fi
-        if test "$found_xft" = "no" ; then
-            if test "$enable_xft" = "yes" ; then
-                { echo "$as_me:$LINENO: WARNING: Can't find xft configuration, or xft is unusable" >&5
+	    CFLAGS=$tk_oldCFlags
+	    LIBS=$tk_oldLibs
+	fi
+		if test "$found_xft" = "no" ; then
+	    if test "$enable_xft" = "yes" ; then
+		{ echo "$as_me:$LINENO: WARNING: Can't find xft configuration, or xft is unusable" >&5
 echo "$as_me: WARNING: Can't find xft configuration, or xft is unusable" >&2;}
-            fi
-            enable_xft=no
-        fi
+	    fi
+	    enable_xft=no
+	    XFT_CFLAGS=""
+	    XFT_LIBS=""
+	else
+            enable_xft=yes
+	fi
     fi
     if test $enable_xft = "yes" ; then
-        UNIX_FONT_OBJS=tkUnixRFont.o
+	UNIX_FONT_OBJS=tkUnixRFont.o
 
 cat >>confdefs.h <<\_ACEOF
 #define HAVE_XFT 1
 _ACEOF
 
     else
-        UNIX_FONT_OBJS=tkUnixFont.o
+	UNIX_FONT_OBJS=tkUnixFont.o
     fi
 
 

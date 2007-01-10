@@ -1,7 +1,7 @@
 /* $Id$
  * Copyright (c) 2004, Joe English
  *
- * Ttk widget set: frame and labelframe widgets
+ * ttk::frame and ttk::labelframe widgets.
  */
 
 #include <tk.h>
@@ -29,7 +29,7 @@ typedef struct
     FramePart	frame;
 } Frame;
 
-static Tk_OptionSpec FrameOptionSpecs[] =
+static const Tk_OptionSpec FrameOptionSpecs[] =
 {
     {TK_OPTION_PIXELS, "-borderwidth", "borderWidth", "BorderWidth", NULL,
 	Tk_Offset(Frame,frame.borderWidthObj), -1,
@@ -149,9 +149,7 @@ static int FrameConfigure(Tcl_Interp *interp, void *recordPtr, int mask)
     return TtkCoreConfigure(interp, recordPtr, mask);
 }
 
-/* public */
-MODULE_SCOPE WidgetSpec ttkFrameWidgetSpec;
-WidgetSpec ttkFrameWidgetSpec =
+static WidgetSpec FrameWidgetSpec =
 {
     "TFrame",			/* className */
     sizeof(Frame),		/* recordSize */
@@ -160,8 +158,8 @@ WidgetSpec ttkFrameWidgetSpec =
     TtkNullInitialize,		/* initializeProc */
     TtkNullCleanup,		/* cleanupProc */
     FrameConfigure,		/* configureProc */
-    TtkNullPostConfigure,		/* postConfigureProc */
-    TtkWidgetGetLayout, 		/* getLayoutProc */
+    TtkNullPostConfigure,	/* postConfigureProc */
+    TtkWidgetGetLayout, 	/* getLayoutProc */
     FrameSize,			/* sizeProc */
     TtkWidgetDoLayout,		/* layoutProc */
     TtkWidgetDisplay		/* displayProc */
@@ -252,7 +250,7 @@ typedef struct
 
 #define LABELWIDGET_CHANGED 0x100
 
-static Tk_OptionSpec LabelframeOptionSpecs[] =
+static const Tk_OptionSpec LabelframeOptionSpecs[] =
 {
     {TK_OPTION_STRING, "-labelanchor", "labelAnchor", "LabelAnchor",
 	"nw", Tk_Offset(Labelframe, label.labelAnchorObj),-1,
@@ -482,7 +480,7 @@ static void LabelframeLostSlave(ClientData clientData, Tk_Window slaveWindow)
     Ttk_LostSlaveProc(clientData, slaveWindow);
 }
 
-static Tk_OptionSpec LabelOptionSpecs[] = {
+static const Tk_OptionSpec LabelOptionSpecs[] = {
     {TK_OPTION_END, 0,0,0, NULL, -1,-1, 0, 0,0}
 };
 
@@ -602,9 +600,7 @@ static int LabelframeConfigure(Tcl_Interp *interp,void *recordPtr,int mask)
     return TCL_OK;
 }
 
-/* public */
-MODULE_SCOPE WidgetSpec ttkLabelframeWidgetSpec;
-WidgetSpec ttkLabelframeWidgetSpec =
+static WidgetSpec LabelframeWidgetSpec =
 {
     "TLabelframe",		/* className */
     sizeof(Labelframe),		/* recordSize */
@@ -614,9 +610,19 @@ WidgetSpec ttkLabelframeWidgetSpec =
     LabelframeCleanup,		/* cleanupProc */
     LabelframeConfigure,	/* configureProc */
     TtkNullPostConfigure,  	/* postConfigureProc */
-    TtkWidgetGetLayout, 		/* getLayoutProc */
+    TtkWidgetGetLayout, 	/* getLayoutProc */
     LabelframeSize,		/* sizeProc */
     LabelframeDoLayout,		/* layoutProc */
     TtkWidgetDisplay		/* displayProc */
 };
 
+/* ======================================================================
+ * +++ Initialization:
+ */
+
+MODULE_SCOPE
+void TtkFrame_Init(Tcl_Interp *interp)
+{
+    RegisterWidget(interp, "ttk::frame", &FrameWidgetSpec);
+    RegisterWidget(interp, "ttk::labelframe", &LabelframeWidgetSpec);
+}

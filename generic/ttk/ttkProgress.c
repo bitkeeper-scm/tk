@@ -2,7 +2,7 @@
  *
  * Copyright (c) Joe English, Pat Thoyts, Michael Kirkham
  *
- * Ttk widget set: progress bar widget.
+ * ttk::progressbar widget.
  */
 
 #include <math.h>
@@ -45,7 +45,7 @@ typedef struct {
     ProgressbarPart	progress;
 } Progressbar;
 
-static Tk_OptionSpec ProgressbarOptionSpecs[] =
+static const Tk_OptionSpec ProgressbarOptionSpecs[] =
 {
     {TK_OPTION_STRING_TABLE, "-orient", "orient", "Orient",
 	"horizontal", Tk_Offset(Progressbar,progress.orientObj), -1,
@@ -534,7 +534,9 @@ TTK_END_LAYOUT
 /*
  * Initialization:
  */
-MODULE_SCOPE int TtkProgressbar_Init(Tcl_Interp *interp)
+
+MODULE_SCOPE
+void TtkProgressbar_Init(Tcl_Interp *interp)
 {
     Ttk_Theme themePtr = Ttk_GetDefaultTheme(interp);
 
@@ -544,8 +546,6 @@ MODULE_SCOPE int TtkProgressbar_Init(Tcl_Interp *interp)
 	"Horizontal.TProgressbar", HorizontalProgressbarLayout);
 
     RegisterWidget(interp, "ttk::progressbar", &ProgressbarWidgetSpec);
-
-    return TCL_OK;
 }
 
 /*EOF*/

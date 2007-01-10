@@ -230,7 +230,7 @@ static char *activeStyleStrings[] = {
  * listbox widget.
  */
 
-static Tk_OptionSpec optionSpecs[] = {
+static const Tk_OptionSpec optionSpecs[] = {
     {TK_OPTION_STRING_TABLE, "-activestyle", "activeStyle", "ActiveStyle",
 	DEF_LISTBOX_ACTIVE_STYLE, -1, Tk_Offset(Listbox, activeStyle),
 	0, (ClientData) activeStyleStrings, 0},
@@ -311,7 +311,7 @@ static Tk_OptionSpec optionSpecs[] = {
  * listbox items
  */
 
-static Tk_OptionSpec itemAttrOptionSpecs[] = {
+static const Tk_OptionSpec itemAttrOptionSpecs[] = {
     {TK_OPTION_BORDER, "-background", "background", "Background",
      NULL, -1, Tk_Offset(ItemAttr, border),
      TK_OPTION_NULL_OK|TK_OPTION_DONT_SET_DEFAULT,
@@ -384,7 +384,7 @@ static int		ConfigureListbox(Tcl_Interp *interp, Listbox *listPtr,
 			    int objc, Tcl_Obj *CONST objv[], int flags);
 static int		ConfigureListboxItem(Tcl_Interp *interp,
 			    Listbox *listPtr, ItemAttr *attrs, int objc,
-			    Tcl_Obj *CONST objv[]);
+			    Tcl_Obj *CONST objv[], int index);
 static int		ListboxDeleteSubCmd(Listbox *listPtr,
 			    int first, int last);
 static void		DestroyListbox(char *memPtr);
@@ -931,7 +931,7 @@ ListboxWidgetObjCmd(clientData, interp, objc, objv)
 	    }
 	} else {
 	    result = ConfigureListboxItem(interp, listPtr, attrPtr,
-		    objc-3, objv+3);
+		    objc-3, objv+3, index);
 	}
 	break;
     }
@@ -1694,13 +1694,14 @@ ConfigureListbox(interp, listPtr, objc, objv, flags)
  */
 
 static int
-ConfigureListboxItem(interp, listPtr, attrs, objc, objv)
+ConfigureListboxItem(interp, listPtr, attrs, objc, objv, index)
     Tcl_Interp *interp;		/* Used for error reporting. */
     register Listbox *listPtr;	/* Information about widget; may or may not
 				 * already have values for some fields. */
     ItemAttr *attrs;		/* Information about the item to configure */
     int objc;			/* Number of valid entries in argv. */
     Tcl_Obj *CONST objv[];	/* Arguments. */
+    int index;			/* Index of the listbox item being configure */
 {
     Tk_SavedOptions savedOptions;
 
@@ -1711,7 +1712,11 @@ ConfigureListboxItem(interp, listPtr, attrs, objc, objv)
 	return TCL_ERROR;
     }
     Tk_FreeSavedOptions(&savedOptions);
-    ListboxWorldChanged((ClientData) listPtr);
+    /*
+     * Redraw this index - ListboxWorldChanged would need to be called
+     * if item attributes were checked in the "world".
+     */
+    EventuallyRedrawRange(listPtr, index, index);
     return TCL_OK;
 }
 

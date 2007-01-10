@@ -1,14 +1,22 @@
 '\"
 '\" Copyright (c) 2004 Joe English
 '\"
+'\" See the file "license.terms" for information on usage and redistribution
+'\" of this file, and for a DISCLAIMER OF ALL WARRANTIES.
+'\" 
+'\" RCS: @(#) $Id$
+'\" 
 .so man.macros
 .TH ttk_treeview n 8.5 Tk "Tk Themed Widget"
+.\" Use _ instead of :: as the name becomes a filename on install
 .SH NAME
-ttk::treeview \- hierarchical multicolumn data display widget
+ttk_treeview \- hierarchical multicolumn data display widget
 .SH SYNOPSIS
 \fBttk::treeview\fR \fIpathname \fR?\fIoptions\fR?
-.SH "DESCRIPTION"
-The treeview widget displays a hierarchical collection of items.
+.BE
+
+.SH DESCRIPTION
+The \fBttk::treeview\fR widget displays a hierarchical collection of items.
 Each item has a textual label, an optional image, 
 and an optional list of data values.
 The data values are displayed in successive columns after
@@ -33,14 +41,15 @@ and control the appearance of the item.
 .\" .PP
 .\" @@@HERE: describe selection, focus item
 .PP
-Treeview widgets support vertical scrolling with the
-standard \fB-yscrollcommand\fR option and \fByview\fR widget command.
-They probably ought to support horizontal scrolling as well.
+Treeview widgets support horizontal and vertical scrolling with the
+standard \fB-[xy]scrollcommand\fR options 
+and \fB[xyview\fR widget commands.
 .SO
 \-class	\-cursor	\-takefocus	\-style
-\-yscrollcommand
+\-xscrollcommand	\-yscrollcommand
 .SE
-.SH "WIDGET OPTIONS"
+
+.SH "WIDGET-SPECIFIC OPTIONS"
 .OP \-columns columns Columns
 A list of column identifiers, 
 specifying the number of columns and their names.
@@ -49,9 +58,10 @@ specifying the number of columns and their names.
 A list of column identifiers 
 (either symbolic names or integer indices)
 specifying which data columns are displayed 
-and the order in which they appear.
+and the order in which they appear, 
+or the string \fB#all\fP.
 .br
-If empty (the default), all columns are shown in the order given.
+If set to \fB#all\fP (the default), all columns are shown in the order given.
 .OP \-height height Height
 Specifies the number of rows which should be visible.
 Note:
@@ -84,6 +94,7 @@ The default is \fBtree headings\fR, i.e., show all elements.
 \fBNOTE:\fR Column #0 always refers to the tree column,
 even if \fB-show tree\fR is not specified.
 .RE
+
 .SH "WIDGET COMMAND"
 .TP
 \fIpathname \fBbbox\fR \fIitem\fR ?\fIcolumn\fR?
@@ -96,7 +107,7 @@ If the \fIitem\fR is not visible
 returns the empty list.
 .TP
 \fIpathname \fBcget\fR \fIoption\fR
-Returns the current value of the specified \fIoption\fR; see \fIwidget(n)\fR.
+Returns the current value of the specified \fIoption\fR; see \fIttk_widget(n)\fR.
 .TP
 \fIpathname \fBchildren\fR \fIitem\fR ?\fInewchildren\fR?
 If \fInewchildren\fR is not specified,
@@ -130,6 +141,16 @@ with respect to the cell. One of
 \fBn\fR, \fBne\fR, \fBe\fR, \fBse\fR,
 \fBs\fR, \fBsw\fR, \fBw\fR, \fBnw\fR, or \fBcenter\fR.
 .TP
+\fB-minwidth\fR
+The minimum width of the column in pixels.
+The treeview widget will not make the column any smaller than
+\fB-minwidth\fR when the widget is resized or the user drags a 
+column separator.
+.TP
+\fB-stretch\fR
+Specifies whether or not the column's width should be adjusted
+when the widget is resized.
+.TP
 \fB-width \fIw\fR
 The width of the column in pixels.  Default is something reasonable,
 probably 200 or so.
@@ -138,7 +159,7 @@ Use \fIpathname column #0\fR to configure the tree column.
 .RE
 .TP
 \fIpathname \fBconfigure\fR ?\fIoption\fR? ?\fIvalue option value ...\fR?
-Modify or query widget options; see \fIwidget(n)\fR.
+Modify or query widget options; see \fIttk_widget(n)\fR.
 .TP
 \fIpathname \fBdelete\fR \fIitemList\fR
 Deletes each of the items in \fIitemList\fR and all of their descendants.
@@ -224,7 +245,7 @@ newly created item.
 See \fBITEM OPTIONS\fR for the list of available options.
 .TP
 \fIpathname \fBinstate \fIstatespec\fR ?\fIscript\fR?
-Test the widget state; see \fIwidget(n)\fR.
+Test the widget state; see \fIttk_widget(n)\fR.
 .TP
 \fIpathname \fBitem\fR \fIitem\fR ?\fI-option \fR?\fIvalue -option value...\fR?
 Query or modify the options for the specified \fIitem\fR.
@@ -288,7 +309,7 @@ in item \fIitem\fR to the specified \fIvalue\fR.
 See also \fBCOLUMN IDENTIFIERS\fR.
 .TP
 \fIpathname \fBstate\fR ?\fIstateSpec\fR?
-Modify or query the widget state; see \fIwidget(n)\fR.
+Modify or query the widget state; see \fIttk_widget(n)\fR.
 .TP
 \fIpathName \fBtag \fIargs...\fR
 .RS
@@ -320,8 +341,11 @@ returns a dictionary of the option settings for \fItagName\fR.
 See \fBTAG OPTIONS\fR for the list of available options.
 .RE
 .TP
+\fIpathName \fBxview \fIargs\fR
+Standard command for horizontal scrolling; see \fIwidget(n)\fR.
+.TP
 \fIpathName \fByview \fIargs\fR
-Standard command for vertical scrolling; see \fIwidget(n)\fR.
+Standard command for vertical scrolling; see \fIttk_widget(n)\fR.
 
 .PP
 .SH "ITEM OPTIONS"
@@ -360,6 +384,7 @@ Specifies the font to use when drawing text.
 Specifies the item image, in case the item's \fB-image\fR option is empty.
 .PP
 \fI(@@@ TODO: sort out order of precedence for options)\fR
+
 .SH "COLUMN IDENTIFIERS"
 Column identifiers take any of the following forms:
 .IP \(bu
@@ -397,5 +422,6 @@ The \fBfocus\fR and \fBselection\fR widget commands can be used
 to determine the affected item or items.
 In Tk 8.5, the affected item is also passed as the \fB-detail\fR field
 of the virtual event.
+
 .SH "SEE ALSO"
-widget(n), listbox(n), image(n), bind(n)
+ttk_widget(n), listbox(n), image(n), bind(n)

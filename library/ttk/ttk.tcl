@@ -24,74 +24,31 @@ source [file join $::ttk::library utils.tcl]
 #	Define $old command as a deprecated alias for $new command
 #	$old and $new must be fully namespace-qualified.
 #
-proc ::ttk::deprecated {old new} {
+proc ttk::deprecated {old new} {
     interp alias {} $old {} ttk::do'deprecate $old $new
 }
 ## do'deprecate --
 #	Implementation procedure for deprecated commands --
 #	issue a warning (once), then re-alias old to new.
 #
-proc ::ttk::do'deprecate {old new args} {
+proc ttk::do'deprecate {old new args} {
     deprecated'warning $old $new
     interp alias {} $old {} $new
-    eval [linsert $args 0 $new]
+    uplevel 1 [linsert $args 0 $new]
 }
 
 ## deprecated'warning --
 #	Gripe about use of deprecated commands.
 #
-proc ::ttk::deprecated'warning {old new} {
+proc ttk::deprecated'warning {old new} {
     puts stderr "$old deprecated -- use $new instead"
 }
 
-### Forward-compatibility.
+### Backward-compatibility.
 #
 # ttk::panedwindow used to be named ttk::paned.  Keep the alias for now.
 #
 ::ttk::deprecated ::ttk::paned ::ttk::panedwindow
-
-if {[info exists ::ttk::deprecrated] && $::ttk::deprecated} {
-    ### Deprecated bits.
-    #
-
-    namespace eval ::tile {
-	# Deprecated namespace.  Define these only when requested
-	variable library
-	if {![info exists library]} {
-	    set library [file dirname [info script]]
-	}
-
-	variable version 0.7.8
-	variable patchlevel 0.7.8
-    }
-    package provide tile $::tile::version
-
-    ### Widgets.
-    #	Widgets are all defined in the ::ttk namespace.
-    #
-    #	For compatibility with earlier Tile releases, we temporarily
-    #	create aliases ::tile::widget, and ::t$widget.
-    #	Using any of the aliases will issue a warning.
-    #
-
-    namespace eval ttk {
-	variable widgets {
-	    button checkbutton radiobutton menubutton label entry
-	    frame labelframe scrollbar
-	    notebook progressbar combobox separator
-	    scale
-	}
-
-	variable wc
-	foreach wc $widgets {
-	    namespace export $wc
-
-	    deprecated ::t$wc ::ttk::$wc
-	    deprecated ::tile::$wc ::ttk::$wc
-	    namespace eval ::tile [list namespace export $wc]
-	}
-    }
-}
 
 ### ::ttk::ThemeChanged --
 #	Called from [::ttk::style theme use].
@@ -157,44 +114,59 @@ source [file join $::ttk::library dialog.tcl]
 bind TLabelframe <<Invoke>>	{ tk::TabToWindow [tk_focusNext %W] }
 bind TLabel <<Invoke>>		{ tk::TabToWindow [tk_focusNext %W] }
 
-### Load themes.
+### Load settings for built-in themes:
 #
-source [file join $::ttk::library defaults.tcl]
-source [file join $::ttk::library classicTheme.tcl]
-source [file join $::ttk::library altTheme.tcl]
-source [file join $::ttk::library clamTheme.tcl]
+proc ttk::LoadThemes {} {
+    variable library
 
-### Choose platform-specific default theme.
-#
-# Notes:
-#	+ xpnative takes precedence over winnative if available.
-#	+ On X11, users can use the X resource database to
-#	  specify a preferred theme (*TkTheme: themeName)
-#
+    # "default" always present:
+    uplevel #0 [list source [file join $library defaults.tcl]] 
 
-set ::ttk::defaultTheme "default"
-
-if {[package provide ttk::theme::winnative] != {}} {
-    source [file join $::ttk::library winTheme.tcl]
-    set ::ttk::defaultTheme "winnative"
-}
-if {[package provide ttk::theme::xpnative] != {}} {
-    source [file join $::ttk::library xpTheme.tcl]
-    set ::ttk::defaultTheme "xpnative"
-}
-if {[package provide ttk::theme::aqua] != {}} {
-    source [file join $::ttk::library aquaTheme.tcl]
-    set ::ttk::defaultTheme "aqua"
-}
-
-set ::ttk::userTheme [option get . tkTheme TkTheme]
-if {$::ttk::userTheme != {}} {
-    if {($::ttk::userTheme in [::ttk::style theme names])
-        || ![catch {package require ttk::theme::$ttk::userTheme}]} {
-	set ::ttk::defaultTheme $::ttk::userTheme
+    set builtinThemes [style theme names]
+    foreach {theme script} {
+	classic 	classicTheme.tcl
+	alt 		altTheme.tcl
+	clam 		clamTheme.tcl
+	winnative	winTheme.tcl
+	xpnative	xpTheme.tcl
+	aqua 		aquaTheme.tcl
+    } {
+	if {[lsearch -exact $builtinThemes $theme] >= 0} {
+	    uplevel #0 [list source [file join $library $script]]
+	}
     }
 }
 
-::ttk::setTheme $::ttk::defaultTheme
+ttk::LoadThemes; rename ::ttk::LoadThemes {}
+
+### Select platform-specific default theme:
+#
+# Notes: 
+#	+ On OSX, aqua theme is the default
+#	+ On Windows, xpnative takes precedence over winnative if available.
+#	+ On X11, users can use the X resource database to
+#	  specify a preferred theme (*TkTheme: themeName);
+#	  otherwise "default" is used.
+#
+
+proc ttk::DefaultTheme {} {
+    set preferred [list aqua xpnative winnative]
+
+    set userTheme [option get . tkTheme TkTheme]
+    if {$userTheme != {} && ![catch {
+	uplevel #0 [list package require ttk::theme::$userTheme]
+    }]} {
+	return $userTheme
+    }
+
+    foreach theme $preferred {
+	if {[package provide ttk::theme::$theme] != ""} {
+	    return $theme
+	}
+    }
+    return "default"
+}
+
+ttk::setTheme [ttk::DefaultTheme] ; rename ttk::DefaultTheme {}
 
 #*EOF*

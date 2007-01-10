@@ -1,10 +1,7 @@
-/*
- * ttkTheme.h --
- *      Declarations for Tk style engine.
- *
+/* $Id$
  * Copyright (c) 2003 Joe English.  Freely redistributable.
  *
- * $Id$
+ * Declarations for Tk theme engine.
  */
 
 #ifndef _TTKTHEME
@@ -12,13 +9,6 @@
 
 #ifdef __cplusplus
 extern "C" {
-#endif
-
-#if defined(BUILD_ttk)
-#	define TTKAPI DLLEXPORT
-#	undef USE_TTK_STUBS
-#else
-#	define TTKAPI DLLIMPORT
 #endif
 
 #ifndef MODULE_SCOPE
@@ -29,17 +19,11 @@ extern "C" {
 #   endif
 #endif
 
+#define TTKAPI MODULE_SCOPE
+
 /* Ttk syncs to the Tk version & patchlevel */
 #define TTK_VERSION    TK_VERSION
 #define TTK_PATCH_LEVEL TK_PATCH_LEVEL
-
-/*
- * Statically branched from tile 0.7.8.
- */
-#ifdef TTK_DEFINE_TILE
-#define TILE_VERSION		"0.7.8"
-#define TILE_PATCH_LEVEL	TILE_VERSION
-#endif
 
 /*------------------------------------------------------------------------
  * +++ Defaults for element option specifications.
@@ -178,7 +162,7 @@ typedef unsigned int Ttk_Sticky;
 #define TTK_FILL_BOTH	(0xF)	/* -sticky nswe */
 
 TTKAPI int Ttk_GetStickyFromObj(Tcl_Interp *, Tcl_Obj *, Ttk_Sticky *);
-MODULE_SCOPE Tcl_Obj *Ttk_NewStickyObj(Ttk_Sticky);
+TTKAPI Tcl_Obj *Ttk_NewStickyObj(Ttk_Sticky);
 
 /*
  * Extra bits for position specifications (combine -side and -sticky)
@@ -203,14 +187,13 @@ typedef unsigned int Ttk_PositionSpec;	/* See below */
 #define _TTK_MASK_STICK (0x0F)	/* See Ttk_UnparseLayout() */
 #define _TTK_MASK_PACK	(0xF0)	/* See Ttk_UnparseLayout(), packStrings */
 
-
 TTKAPI Ttk_Box Ttk_PackBox(Ttk_Box *cavity, int w, int h, Ttk_Side side);
 TTKAPI Ttk_Box Ttk_StickBox(Ttk_Box parcel, int w, int h, Ttk_Sticky sticky);
 TTKAPI Ttk_Box Ttk_AnchorBox(Ttk_Box parcel, int w, int h, Tk_Anchor anchor);
 TTKAPI Ttk_Box Ttk_PadBox(Ttk_Box b, Ttk_Padding p);
 TTKAPI Ttk_Box Ttk_ExpandBox(Ttk_Box b, Ttk_Padding p);
 TTKAPI Ttk_Box Ttk_PlaceBox(Ttk_Box *cavity, int w,int h, Ttk_Side,Ttk_Sticky);
-MODULE_SCOPE Ttk_Box Ttk_PositionBox(Ttk_Box *cavity, int w, int h, Ttk_PositionSpec);
+TTKAPI Ttk_Box Ttk_PositionBox(Ttk_Box *cavity, int w, int h, Ttk_PositionSpec);
 
 /*------------------------------------------------------------------------
  * +++ Themes.
@@ -218,7 +201,7 @@ MODULE_SCOPE Ttk_Box Ttk_PositionBox(Ttk_Box *cavity, int w, int h, Ttk_Position
 MODULE_SCOPE void Ttk_StylePkgInit(Tcl_Interp *);
 
 typedef struct Ttk_Theme_ *Ttk_Theme;
-typedef struct Ttk_ElementImpl_ *Ttk_Element;
+typedef struct Ttk_ElementImpl_ *Ttk_ElementImpl;
 typedef struct Ttk_Layout_ *Ttk_Layout;
 typedef struct Ttk_LayoutNode_ Ttk_LayoutNode;
 
@@ -249,7 +232,7 @@ typedef void (Ttk_ElementSizeProc)(void *clientData, void *elementRecord,
 typedef void (Ttk_ElementDrawProc)(void *clientData, void *elementRecord,
         Tk_Window tkwin, Drawable d, Ttk_Box b, Ttk_State state);
 
-typedef struct Ttk_ElementOptionSpec 
+typedef struct Ttk_ElementOptionSpec
 {
     char *optionName;		/* Command-line name of the widget option */
     Tk_OptionType type; 	/* Accepted option types */
@@ -261,13 +244,13 @@ typedef struct Ttk_ElementOptionSpec
 
 typedef struct Ttk_ElementSpec {
     enum TTKStyleVersion2 version;	/* Version of the style support. */
-    size_t elementSize;			/* Size of element record */ 
+    size_t elementSize;			/* Size of element record */
     Ttk_ElementOptionSpec *options;	/* List of options, NULL-terminated */
     Ttk_ElementSizeProc *size;		/* Compute min size and padding */
     Ttk_ElementDrawProc *draw;  	/* Draw the element */
 } Ttk_ElementSpec;
 
-TTKAPI Ttk_Element Ttk_RegisterElement(
+TTKAPI Ttk_ElementImpl Ttk_RegisterElement(
 	Tcl_Interp *interp, Ttk_Theme theme, const char *elementName,
 	Ttk_ElementSpec *, void *clientData);
 
@@ -341,7 +324,6 @@ MODULE_SCOPE Ttk_Box Ttk_LayoutNodeInternalParcel(Ttk_Layout,Ttk_LayoutNode *);
 MODULE_SCOPE Ttk_Padding Ttk_LayoutNodeInternalPadding(Ttk_Layout,Ttk_LayoutNode *);
 MODULE_SCOPE void Ttk_LayoutNodeReqSize(Ttk_Layout, Ttk_LayoutNode *, int *w, int *h);
 
-MODULE_SCOPE void Ttk_LayoutNodeSetParcel(Ttk_LayoutNode *node, Ttk_Box parcel);
 MODULE_SCOPE void Ttk_PlaceLayoutNode(Ttk_Layout,Ttk_LayoutNode *, Ttk_Box);
 MODULE_SCOPE void Ttk_ChangeElementState(Ttk_LayoutNode *,unsigned set,unsigned clr);
 
@@ -365,6 +347,15 @@ MODULE_SCOPE Tk_Image Ttk_UseImage(Ttk_ResourceCache, Tk_Window, Tcl_Obj *);
 MODULE_SCOPE void Ttk_RegisterNamedColor(Ttk_ResourceCache, const char *, XColor *);
 
 /*------------------------------------------------------------------------
+ * +++ Image specifications.
+ */
+
+typedef struct TtkImageSpec Ttk_ImageSpec;
+TTKAPI Ttk_ImageSpec *TtkGetImageSpec(Tcl_Interp *, Tk_Window, Tcl_Obj *);
+TTKAPI void TtkFreeImageSpec(Ttk_ImageSpec *);
+TTKAPI Tk_Image TtkSelectImage(Ttk_ImageSpec *, Ttk_State);
+
+/*------------------------------------------------------------------------
  * +++ Miscellaneous enumerations.
  * 	Other stuff that element implementations need to know about.
  */
@@ -375,7 +366,7 @@ typedef enum 			/* -default option values */
     TTK_BUTTON_DEFAULT_DISABLED	/* not defaultable */
 } Ttk_ButtonDefaultState;
 
-MODULE_SCOPE int Ttk_GetButtonDefaultStateFromObj(Tcl_Interp *, Tcl_Obj *, int *);
+TTKAPI int Ttk_GetButtonDefaultStateFromObj(Tcl_Interp *, Tcl_Obj *, int *);
 
 typedef enum 			/* -compound option values */
 {
@@ -389,11 +380,11 @@ typedef enum 			/* -compound option values */
     TTK_COMPOUND_RIGHT  	/* image to right of text */
 } Ttk_Compound;
 
-MODULE_SCOPE int Ttk_GetCompoundFromObj(Tcl_Interp *, Tcl_Obj *, int *);
+TTKAPI int Ttk_GetCompoundFromObj(Tcl_Interp *, Tcl_Obj *, int *);
 
 typedef enum { 		/* -orient option values */
     TTK_ORIENT_HORIZONTAL,
-    TTK_ORIENT_VERTICAL 
+    TTK_ORIENT_VERTICAL
 } Ttk_Orient;
 
 /*------------------------------------------------------------------------

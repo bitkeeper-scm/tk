@@ -1,6 +1,6 @@
 /* $Id$
  *
- * Ttk widget set: text, image, and label elements.
+ * text, image, and label elements.
  *
  * The label element combines text and image elements,
  * with layout determined by the "-compound" option.
@@ -209,8 +209,7 @@ static void TextElementDraw(
     }
 }
 
-MODULE_SCOPE Ttk_ElementSpec ttkTextElementSpec;
-/*public*/ Ttk_ElementSpec ttkTextElementSpec =
+static Ttk_ElementSpec TextElementSpec =
 {
     TK_STYLE_VERSION_2,
     sizeof(TextElement),
@@ -240,8 +239,7 @@ static void ImageTextElementDraw(
     TextCleanup(text);
 }
 
-MODULE_SCOPE Ttk_ElementSpec ttkImageTextElementSpec;
-/*public*/ Ttk_ElementSpec ttkImageTextElementSpec =
+static Ttk_ElementSpec ImageTextElementSpec =
 {
     TK_STYLE_VERSION_2,
     sizeof(TextElement),
@@ -253,24 +251,19 @@ MODULE_SCOPE Ttk_ElementSpec ttkImageTextElementSpec;
 /*
  *----------------------------------------------------------------------
  * +++ Image element.
- *
  * Draws an image.
- *
- * The clientData parameter is a Tcl_Interp, which is needed for
- * the call to Tk_GetImage().
  */
 
 typedef struct
 {
     Tcl_Obj	*imageObj;
-
     Tcl_Obj 	*stippleObj;	/* For TTK_STATE_DISABLED */
     Tcl_Obj 	*backgroundObj;	/* " " */
 
+    Ttk_ImageSpec *imageSpec;
     Tk_Image	tkimg;
     int 	width;
     int		height;
-    int		doStipple;
 } ImageElement;
 
 /* ===> NB: Keep in sync with label element option table.  <===
@@ -286,13 +279,6 @@ static Ttk_ElementOptionSpec ImageElementOptions[] =
     {NULL}
 };
 
-/* NullImageChanged --
- * 	No-op Tk_ImageChangedProc for Tk_GetImage.
- */
-static void NullImageChanged(ClientData clientData,
-    int x, int y, int width, int height, int imageWidth, int imageHeight)
-{ }
-
 /*
  * ImageSetup() --
  * 	Look up the Tk_Image from the image element's imageObj resource.
@@ -304,53 +290,21 @@ static void NullImageChanged(ClientData clientData,
  */
 
 static int ImageSetup(
-    ImageElement *image, Tk_Window tkwin, Tcl_Interp *interp, Ttk_State state)
+    ImageElement *image, Tk_Window tkwin, Ttk_State state)
 {
-    const char *imageName;
-    Tcl_Obj *imageObj = image->imageObj;
-    Tcl_Obj **mapList = NULL;
-    int i, mapCnt = 0;
 
-    if (!imageObj)		/* No -image option specified */
+    if (!image->imageObj) {
 	return 0;
-
-    if (Tcl_ListObjGetElements(interp,imageObj,&mapCnt,&mapList) == TCL_ERROR)
-	return 0;
-
-    if (mapCnt == 0)		/* -image is an empty list */
-	return 0;
-
-    /* Only enable disabled-stippling if there's no state map:
-     * @@@ Possibly: Don't do disabled-stippling at all;
-     * @@@ it's ugly and out of fashion.
-     */
-    image->doStipple = mapCnt == 1;
-
-    /* Locate which image to use based on current state:
-     */
-    imageObj = mapList[0];
-    for (i = 1; i < mapCnt - 1; i += 2) {
-	Ttk_StateSpec stateSpec;
-
-	if (Ttk_GetStateSpecFromObj(interp,mapList[i],&stateSpec) != TCL_OK) {
-	    /* shouldn't happen, but can */
-	    break;
-	}
-
-	if (Ttk_StateMatches(state, &stateSpec)) {
-	    imageObj = mapList[i+1];
-	    break;
-	}
     }
-
-    imageName = Tcl_GetString(imageObj);
-    if (!imageName || !*imageName)	/* Empty string. */
+    image->imageSpec = TtkGetImageSpec(NULL, tkwin, image->imageObj);
+    if (!image->imageSpec) {
 	return 0;
-
-    image->tkimg = Tk_GetImage(interp, tkwin, imageName, NullImageChanged, 0);
-    if (!image->tkimg)			/* No such image */
+    }
+    image->tkimg = TtkSelectImage(image->imageSpec, state);
+    if (!image->tkimg) {
+	TtkFreeImageSpec(image->imageSpec);
 	return 0;
-
+    }
     Tk_SizeOfImage(image->tkimg, &image->width, &image->height);
 
     return 1;
@@ -358,7 +312,7 @@ static int ImageSetup(
 
 static void ImageCleanup(ImageElement *image)
 {
-    Tk_FreeImage(image->tkimg);
+    TtkFreeImageSpec(image->imageSpec);
 }
 
 /*
@@ -402,8 +356,15 @@ static void ImageDraw(
 
     Tk_RedrawImage(image->tkimg, 0,0, width, height, d, b.x, b.y);
 
-    if (image->doStipple && (state & TTK_STATE_DISABLED)) {
-	StippleOver(image, tkwin, d, b.x,b.y);
+    /* If we're disabled there's no state-specific 'disabled' image, 
+     * stipple the image.
+     * @@@ Possibly: Don't do disabled-stippling at all;
+     * @@@ it's ugly and out of fashion.
+     */
+    if (state & TTK_STATE_DISABLED) {
+	if (TtkSelectImage(image->imageSpec, 0ul) == image->tkimg) {
+	    StippleOver(image, tkwin, d, b.x,b.y);
+	}
     }
 }
 
@@ -412,9 +373,8 @@ static void ImageElementSize(
     int *widthPtr, int *heightPtr, Ttk_Padding *paddingPtr)
 {
     ImageElement *image = elementRecord;
-    Tcl_Interp *interp = clientData;
 
-    if (ImageSetup(image, tkwin, interp, 0)) {
+    if (ImageSetup(image, tkwin, 0)) {
 	*widthPtr = image->width;
 	*heightPtr = image->height;
 	ImageCleanup(image);
@@ -426,16 +386,14 @@ static void ImageElementDraw(
     Drawable d, Ttk_Box b, Ttk_State state)
 {
     ImageElement *image = elementRecord;
-    Tcl_Interp *interp = clientData;
 
-    if (ImageSetup(image, tkwin, interp, state)) {
+    if (ImageSetup(image, tkwin, state)) {
 	ImageDraw(image, tkwin, d, b, state);
 	ImageCleanup(image);
     }
 }
 
-MODULE_SCOPE Ttk_ElementSpec ttkImageElementSpec;
-/*public*/ Ttk_ElementSpec ttkImageElementSpec =
+static Ttk_ElementSpec ImageElementSpec =
 {
     TK_STYLE_VERSION_2,
     sizeof(ImageElement),
@@ -448,9 +406,6 @@ MODULE_SCOPE Ttk_ElementSpec ttkImageElementSpec;
  * +++ Label element.
  *
  * Displays an image and/or text, as determined by the -compound option.
- *
- * The clientData parameter is a Tcl_Interp; this is needed for the
- * image part.
  *
  * Differences from Tk 8.4 compound elements:
  *
@@ -549,7 +504,7 @@ static Ttk_ElementOptionSpec LabelElementOptions[] =
 
 #define MAX(a,b) ((a) > (b) ? a : b);
 static void LabelSetup(
-    LabelElement *c, Tk_Window tkwin, Tcl_Interp *interp, Ttk_State state)
+    LabelElement *c, Tk_Window tkwin, Ttk_State state)
 {
     Tk_GetPixelsFromObj(NULL,tkwin,c->spaceObj,&c->space);
     Ttk_GetCompoundFromObj(NULL,c->compoundObj,(int*)&c->compound);
@@ -558,13 +513,13 @@ static void LabelSetup(
      * Deal with TTK_COMPOUND_NONE.
      */
     if (c->compound == TTK_COMPOUND_NONE) {
-	if (ImageSetup(&c->image, tkwin, interp, state)) {
+	if (ImageSetup(&c->image, tkwin, state)) {
 	    c->compound = TTK_COMPOUND_IMAGE;
 	} else {
 	    c->compound = TTK_COMPOUND_TEXT;
 	}
     } else if (c->compound != TTK_COMPOUND_TEXT) {
-    	if (!ImageSetup(&c->image, tkwin, interp, state)) {
+    	if (!ImageSetup(&c->image, tkwin, state)) {
 	    c->compound = TTK_COMPOUND_TEXT;
 	}
     }
@@ -622,10 +577,9 @@ static void LabelElementSize(
     int *widthPtr, int *heightPtr, Ttk_Padding *paddingPtr)
 {
     LabelElement *label = elementRecord;
-    Tcl_Interp *interp = clientData;
     int textReqWidth = 0;
 
-    LabelSetup(label, tkwin, interp, 0);
+    LabelSetup(label, tkwin, 0);
 
     *heightPtr = label->totalHeight;
 
@@ -680,10 +634,9 @@ static void LabelElementDraw(
     Drawable d, Ttk_Box b, Ttk_State state)
 {
     LabelElement *l = elementRecord;
-    Tcl_Interp *interp = clientData;
     Tk_Anchor anchor = TK_ANCHOR_CENTER;
 
-    LabelSetup(l, tkwin, interp, state);
+    LabelSetup(l, tkwin, state);
 
     /*
      * Adjust overall parcel based on -anchor:
@@ -732,8 +685,7 @@ static void LabelElementDraw(
     LabelCleanup(l);
 }
 
-MODULE_SCOPE Ttk_ElementSpec ttkLabelElementSpec;
-/*public*/ Ttk_ElementSpec ttkLabelElementSpec =
+static Ttk_ElementSpec LabelElementSpec =
 {
     TK_STYLE_VERSION_2,
     sizeof(LabelElement),
@@ -741,4 +693,20 @@ MODULE_SCOPE Ttk_ElementSpec ttkLabelElementSpec;
     LabelElementSize,
     LabelElementDraw
 };
+
+/*------------------------------------------------------------------------
+ * +++ Initialization.
+ */
+
+MODULE_SCOPE
+void TtkLabel_Init(Tcl_Interp *interp)
+{
+    Ttk_Theme theme =  Ttk_GetDefaultTheme(interp);
+
+    Ttk_RegisterElement(interp, theme, "text", &TextElementSpec, NULL);
+    Ttk_RegisterElement(interp, theme, "image", &ImageElementSpec, NULL);
+    Ttk_RegisterElement(interp, theme, "label", &LabelElementSpec, NULL);
+    Ttk_RegisterElement(interp, theme, "Labelframe.text", /* @@@ */
+	    				&ImageTextElementSpec,NULL);
+}
 

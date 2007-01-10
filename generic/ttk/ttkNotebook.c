@@ -62,7 +62,7 @@ typedef struct
  * PaneOptionSpecs includes additional options for child window placement
  * and is used to configure the slave.
  */
-static Tk_OptionSpec TabOptionSpecs[] =
+static const Tk_OptionSpec TabOptionSpecs[] =
 {
     {TK_OPTION_STRING_TABLE, "-state", "", "",
 	"normal", -1,Tk_Offset(Tab,state),
@@ -79,7 +79,7 @@ static Tk_OptionSpec TabOptionSpecs[] =
     {TK_OPTION_END}
 };
 
-static Tk_OptionSpec PaneOptionSpecs[] =
+static const Tk_OptionSpec PaneOptionSpecs[] =
 {
     {TK_OPTION_STRING, "-padding", "padding", "Padding", "0",
 	Tk_Offset(Tab,paddingObj), -1, 0,0,GEOMETRY_CHANGED },
@@ -114,7 +114,7 @@ typedef struct
     NotebookPart notebook;
 } Notebook;
 
-static Tk_OptionSpec NotebookOptionSpecs[] =
+static const Tk_OptionSpec NotebookOptionSpecs[] =
 {
     WIDGET_TAKES_FOCUS,
 
@@ -638,7 +638,7 @@ static int TabConfigured(
     Tk_Window tkwin = mgr->masterWindow;
 
     /* Check options:
-     * @@@ TODO: validate -image option with TtkGetImageList()
+     * @@@ TODO: validate -image option.
      */
     if (Ttk_GetStickyFromObj(interp, tab->stickyObj, &sticky) != TCL_OK) {
 	return TCL_ERROR;
@@ -1249,7 +1249,12 @@ TTK_BEGIN_LAYOUT(TabLayout)
 		TTK_NODE("Notebook.label", TTK_PACK_TOP))))
 TTK_END_LAYOUT
 
-MODULE_SCOPE int TtkNotebook_Init(Tcl_Interp *interp)
+/*------------------------------------------------------------------------
+ * +++ Initialization.
+ */
+
+MODULE_SCOPE 
+void TtkNotebook_Init(Tcl_Interp *interp)
 {
     Ttk_Theme themePtr = Ttk_GetDefaultTheme(interp);
 
@@ -1257,8 +1262,6 @@ MODULE_SCOPE int TtkNotebook_Init(Tcl_Interp *interp)
     Ttk_RegisterLayout(themePtr, "TNotebook", NotebookLayout);
 
     RegisterWidget(interp, "ttk::notebook", &NotebookWidgetSpec);
-
-    return TCL_OK;
 }
 
 /*EOF*/

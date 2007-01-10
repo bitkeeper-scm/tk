@@ -75,7 +75,7 @@ typedef struct {
 
 /* @@@ NOTE: -orient is readonly 'cause dynamic oriention changes NYI
  */
-static Tk_OptionSpec PanedOptionSpecs[] = {
+static const Tk_OptionSpec PanedOptionSpecs[] = {
     {TK_OPTION_STRING_TABLE, "-orient", "orient", "Orient", "vertical",
 	Tk_Offset(Paned,paned.orientObj), Tk_Offset(Paned,paned.orient),
 	0,(ClientData)ttkOrientStrings,READONLY_OPTION|STYLE_CHANGED },
@@ -92,7 +92,7 @@ typedef struct {
     int 	weight; 		/* Pane -weight, for resizing */
 } Pane;
 
-static Tk_OptionSpec PaneOptionSpecs[] = {
+static const Tk_OptionSpec PaneOptionSpecs[] = {
     {TK_OPTION_INT, "-weight", "weight", "Weight", "0",
 	-1,Tk_Offset(Pane,weight), 0,0,GEOMETRY_CHANGED },
     {TK_OPTION_END, 0,0,0, NULL, -1,-1, 0,0,0}
@@ -447,29 +447,33 @@ static Ttk_Layout PanedGetLayout(
 {
     Paned *pw = recordPtr;
     Ttk_Layout panedLayout = TtkWidgetGetLayout(interp, themePtr, recordPtr);
-    int horizontal = pw->paned.orient == TTK_ORIENT_HORIZONTAL;
-    const char *layoutName = horizontal ? ".Vertical.Sash" : ".Horizontal.Sash";
-    Ttk_Layout sashLayout = Ttk_CreateSublayout(interp, themePtr, panedLayout,
-	    layoutName, pw->core.optionTable);
 
-    if (sashLayout) {
-	int sashWidth, sashHeight;
+    if (panedLayout) {
+	int horizontal = pw->paned.orient == TTK_ORIENT_HORIZONTAL;
+	const char *layoutName = 
+	    horizontal ? ".Vertical.Sash" : ".Horizontal.Sash";
+	Ttk_Layout sashLayout = Ttk_CreateSublayout(
+	    interp, themePtr, panedLayout, layoutName, pw->core.optionTable);
 
-	if (pw->paned.sashLayout)
-	    Ttk_FreeLayout(pw->paned.sashLayout);
-	pw->paned.sashLayout = sashLayout;
+	if (sashLayout) {
+	    int sashWidth, sashHeight;
 
-	Ttk_LayoutSize(sashLayout, 0, &sashWidth, &sashHeight);
+	    Ttk_LayoutSize(sashLayout, 0, &sashWidth, &sashHeight);
+	    pw->paned.sashThickness = horizontal ? sashWidth : sashHeight;
 
-	pw->paned.sashThickness = horizontal ? sashWidth : sashHeight;
-
-	/* Sanity-check:
-	 */
-	if (pw->paned.sashThickness < MIN_SASH_THICKNESS)
-	    pw->paned.sashThickness = MIN_SASH_THICKNESS;
-
-	Ttk_ManagerSizeChanged(pw->paned.mgr);
+	    if (pw->paned.sashLayout)
+		Ttk_FreeLayout(pw->paned.sashLayout);
+	    pw->paned.sashLayout = sashLayout;
+	} else {
+	    Ttk_FreeLayout(panedLayout);
+	    return 0;
+	}
     }
+
+    /* Sanity-check:
+     */
+    if (pw->paned.sashThickness < MIN_SASH_THICKNESS)
+	pw->paned.sashThickness = MIN_SASH_THICKNESS;
 
     return panedLayout;
 }
@@ -795,7 +799,8 @@ TTK_END_LAYOUT
 /*------------------------------------------------------------------------
  * +++ Registration routine.
  */
-MODULE_SCOPE int TtkPaned_Init(Tcl_Interp *interp)
+MODULE_SCOPE 
+void TtkPanedwindow_Init(Tcl_Interp *interp)
 {
     Ttk_Theme themePtr = Ttk_GetDefaultTheme(interp);
     RegisterWidget(interp, "ttk::panedwindow", &PanedWidgetSpec);
@@ -806,7 +811,5 @@ MODULE_SCOPE int TtkPaned_Init(Tcl_Interp *interp)
     Ttk_RegisterLayout(themePtr, "TPanedwindow", PanedLayout);
     Ttk_RegisterLayout(themePtr, "Horizontal.Sash", HorizontalSashLayout);
     Ttk_RegisterLayout(themePtr, "Vertical.Sash", VerticalSashLayout);
-    
-    return TCL_OK;
 }
 

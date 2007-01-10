@@ -156,8 +156,9 @@ typedef struct
 #define DEF_INSERT_BG	"black"
 #define DEF_ENTRY_WIDTH	"20"
 #define DEF_ENTRY_FONT	"TkTextFont"
+#define DEF_LIST_HEIGHT	"10"
 
-static Tk_OptionSpec EntryOptionSpecs[] =
+static const Tk_OptionSpec EntryOptionSpecs[] =
 {
     WIDGET_TAKES_FOCUS,
 
@@ -1666,7 +1667,7 @@ static WidgetSpec EntryWidgetSpec =
     EntryCleanup,		/* cleanupProc */
     EntryConfigure,		/* configureProc */
     EntryPostConfigure,  	/* postConfigureProc */
-    TtkWidgetGetLayout, 		/* getLayoutProc */
+    TtkWidgetGetLayout, 	/* getLayoutProc */
     TtkWidgetSize, 		/* sizeProc */
     EntryDoLayout,		/* layoutProc */
     EntryDisplay		/* displayProc */
@@ -1679,6 +1680,7 @@ static WidgetSpec EntryWidgetSpec =
 typedef struct {
     Tcl_Obj	*postCommandObj;
     Tcl_Obj	*valuesObj;
+    Tcl_Obj	*heightObj;
     int 	currentIndex;
 } ComboboxPart;
 
@@ -1688,8 +1690,11 @@ typedef struct {
     ComboboxPart combobox;
 } Combobox;
 
-static Tk_OptionSpec ComboboxOptionSpecs[] =
+static const Tk_OptionSpec ComboboxOptionSpecs[] =
 {
+    {TK_OPTION_STRING, "-height", "height", "Height",
+        DEF_LIST_HEIGHT, Tk_Offset(Combobox, combobox.heightObj), -1,
+	0,0,0 },
     {TK_OPTION_STRING, "-postcommand", "postCommand", "PostCommand",
         "", Tk_Offset(Combobox, combobox.postCommandObj), -1,
 	0,0,0 },
@@ -1822,7 +1827,7 @@ static WidgetSpec ComboboxWidgetSpec =
     EntryCleanup,		/* cleanupProc */
     ComboboxConfigure,		/* configureProc */
     EntryPostConfigure,  	/* postConfigureProc */
-    TtkWidgetGetLayout, 		/* getLayoutProc */
+    TtkWidgetGetLayout, 	/* getLayoutProc */
     TtkWidgetSize, 		/* sizeProc */
     EntryDoLayout,		/* layoutProc */
     EntryDisplay		/* displayProc */
@@ -1848,7 +1853,7 @@ static Ttk_ElementOptionSpec TextareaElementOptions[] = {
     {0,0,0}
 };
 
-static void TextareaElementGeometry(
+static void TextareaElementSize(
     void *clientData, void *elementRecord, Tk_Window tkwin,
     int *widthPtr, int *heightPtr, Ttk_Padding *paddingPtr)
 {
@@ -1871,9 +1876,13 @@ static Ttk_ElementSpec TextareaElementSpec = {
     TK_STYLE_VERSION_2,
     sizeof(TextareaElement),
     TextareaElementOptions,
-    TextareaElementGeometry,
+    TextareaElementSize,
     TtkNullElementDraw
 };
+
+/*------------------------------------------------------------------------
+ * +++ Widget layouts.
+ */
 
 TTK_BEGIN_LAYOUT(EntryLayout)
     TTK_GROUP("Entry.field", TTK_FILL_BOTH|TTK_BORDER,
@@ -1888,10 +1897,12 @@ TTK_BEGIN_LAYOUT(ComboboxLayout)
 	    TTK_NODE("Combobox.textarea", TTK_FILL_BOTH)))
 TTK_END_LAYOUT
 
-/* TtkEntryWidget_Init --
- * 	Register entry-based widgets and related resources.
+/*------------------------------------------------------------------------
+ * +++ Initialization.
  */
-MODULE_SCOPE int TtkEntryWidget_Init(Tcl_Interp *interp)
+
+MODULE_SCOPE
+void TtkEntry_Init(Tcl_Interp *interp)
 {
     Ttk_Theme themePtr =  Ttk_GetDefaultTheme(interp);
 
@@ -1902,8 +1913,6 @@ MODULE_SCOPE int TtkEntryWidget_Init(Tcl_Interp *interp)
 
     RegisterWidget(interp, "ttk::entry", &EntryWidgetSpec);
     RegisterWidget(interp, "ttk::combobox", &ComboboxWidgetSpec);
-
-    return TCL_OK;
 }
 
 /*EOF*/

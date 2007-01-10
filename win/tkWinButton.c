@@ -134,7 +134,10 @@ InitBoxes(void)
 	    Tcl_GetThreadData(&dataKey, sizeof(ThreadSpecificData));
 
     hrsrc = FindResource(module, "buttons", RT_BITMAP);
-    if (hrsrc) {
+    if (hrsrc == NULL) {
+	Tcl_Panic("FindResource() failed for buttons bitmap resource, "
+            "resources in tk_base.rc must be linked into Tk dll or static executable");
+    } else {
 	hblk = LoadResource(module, hrsrc);
 	tsdPtr->boxesPtr = (LPBITMAPINFOHEADER)LockResource(hblk);
     }
@@ -346,7 +349,7 @@ TkpDisplayButton(
 				 * warning. */
     int y, relief;
     register Tk_Window tkwin = butPtr->tkwin;
-    int width, height, haveImage = 0, haveText = 0, drawRing = 0;
+    int width = 0, height = 0, haveImage = 0, haveText = 0, drawRing = 0;
     RECT rect;
     int defaultWidth;		/* Width of default ring. */
     int offset;			/* 0 means this is a label widget. 1 means it

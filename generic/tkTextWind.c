@@ -28,7 +28,7 @@ static void		EmbWinRequestProc(ClientData clientData,
 static void		EmbWinLostSlaveProc(ClientData clientData,
 			    Tk_Window tkwin);
 
-static Tk_GeomMgr textGeomType = {
+static const Tk_GeomMgr textGeomType = {
     "text",			/* name */
     EmbWinRequestProc,		/* requestProc */
     EmbWinLostSlaveProc,	/* lostSlaveProc */
@@ -102,7 +102,7 @@ typedef enum {
  * Information used for parsing window configuration options:
  */
 
-static Tk_OptionSpec optionSpecs[] = {
+static const Tk_OptionSpec optionSpecs[] = {
     {TK_OPTION_STRING_TABLE, "-align", NULL, NULL,
 	"center", -1, Tk_Offset(TkTextEmbWindow, align),
 	0, (ClientData) alignStrings, 0},

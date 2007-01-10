@@ -68,11 +68,6 @@ ScrollHandle TtkCreateScrollHandle(WidgetCore *corePtr, Scrollable *scrollPtr)
     return h;
 }
 
-void TtkFreeScrollHandle(ScrollHandle h)
-{
-    Tcl_EventuallyFree((ClientData)h, TCL_DYNAMIC);
-}
-
 /* UpdateScrollbar --
  *	Call the -scrollcommand callback to sync the scrollbar.
  * 	Returns: Whatever the -scrollcommand does.
@@ -80,27 +75,29 @@ void TtkFreeScrollHandle(ScrollHandle h)
 static int UpdateScrollbar(Tcl_Interp *interp, ScrollHandle h)
 {
     Scrollable *s = h->scrollPtr;
+    WidgetCore *corePtr = h->corePtr;
     char args[TCL_DOUBLE_SPACE * 2];
     int code;
 
-    h->flags &= ~(SCROLL_UPDATE_PENDING | SCROLL_UPDATE_REQUIRED);
+    h->flags &= ~SCROLL_UPDATE_REQUIRED;
 
-    if (s->scrollCmd == NULL)
+    if (s->scrollCmd == NULL) {
 	return TCL_OK;
+    }
 
     sprintf(args, " %g %g",
 		(double)s->first / s->total,
 		(double)s->last / s->total);
 
-    Tcl_Preserve(h->corePtr);
+    Tcl_Preserve(corePtr);
     code = Tcl_VarEval(interp, s->scrollCmd, args, NULL);
-    if (WidgetDestroyed(h->corePtr)) {
-	Tcl_Release(h->corePtr);
+    if (WidgetDestroyed(corePtr)) {
+	Tcl_Release(corePtr);
 	return TCL_ERROR;
     }
-    Tcl_Release(h->corePtr);
+    Tcl_Release(corePtr);
 
-    if (code != TCL_OK) {
+    if (code != TCL_OK && !Tcl_InterpDeleted(interp)) {
 	/* Disable the -scrollcommand, add to stack trace:
 	 */
 	ckfree(s->scrollCmd);
@@ -123,18 +120,13 @@ static void UpdateScrollbarBG(ClientData clientData)
     Tcl_Interp *interp = h->corePtr->interp;
     int code;
 
-    if (WidgetDestroyed(h->corePtr)) {
-	Tcl_Release(clientData);
-	return;
-    }
-
+    h->flags &= ~SCROLL_UPDATE_PENDING;
     Tcl_Preserve((ClientData) interp);
     code = UpdateScrollbar(interp, h);
     if (code == TCL_ERROR && !Tcl_InterpDeleted(interp)) {
 	Tcl_BackgroundError(interp);
     }
     Tcl_Release((ClientData) interp);
-    Tcl_Release(clientData);
 }
 
 /* TtkScrolled --
@@ -152,6 +144,12 @@ void TtkScrolled(ScrollHandle h, int first, int last, int total)
 	total = 1;
     }
 
+    if (last > total) {
+	first -= (last - total);
+	if (first < 0) first = 0;
+	last = total;
+    }
+
     if (s->first != first || s->last != last || s->total != total
 	    || (h->flags & SCROLL_UPDATE_REQUIRED))
     {
@@ -160,7 +158,6 @@ void TtkScrolled(ScrollHandle h, int first, int last, int total)
 	s->total = total;
 
 	if (!(h->flags & SCROLL_UPDATE_PENDING)) {
-	    Tcl_Preserve((ClientData)h);
 	    Tcl_DoWhenIdle(UpdateScrollbarBG, (ClientData)h);
 	    h->flags |= SCROLL_UPDATE_PENDING;
 	}
@@ -244,5 +241,13 @@ void TtkScrollTo(ScrollHandle h, int newFirst)
 	s->first = newFirst;
 	TtkRedisplayWidget(h->corePtr);
     }
+}
+
+void TtkFreeScrollHandle(ScrollHandle h)
+{
+    if (h->flags & SCROLL_UPDATE_PENDING) {
+	Tcl_CancelIdleCall(UpdateScrollbarBG, (ClientData)h);
+    }
+    ckfree((ClientData)h);
 }
 
