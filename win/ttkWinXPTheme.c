@@ -21,7 +21,7 @@
 /* Stub for platforms that lack the XP theme API headers: */
 #include <windows.h>
 #include <tcl.h>
-int XPTheme_Init(Tcl_Interp *interp, HWND hwnd) { return TCL_OK; }
+int TtkXPTheme_Init(Tcl_Interp *interp, HWND hwnd) { return TCL_OK; }
 #else
 
 #define WINVER 0x0501	/* Requires Windows XP APIs */
@@ -52,6 +52,7 @@ typedef HRESULT (STDAPICALLTYPE DrawThemeTextProc)(HTHEME hTheme, HDC hdc,
 		 int iPartId, int iStateId, LPCWSTR pszText, int iCharCount,
 		 DWORD dwTextFlags, DWORD dwTextFlags2, const RECT *pRect);
 typedef BOOL    (STDAPICALLTYPE IsThemeActiveProc)(VOID);
+typedef BOOL    (STDAPICALLTYPE IsAppThemedProc)(VOID);
 
 typedef struct
 {
@@ -61,7 +62,8 @@ typedef struct
     DrawThemeBackgroundProc		*DrawThemeBackground;
     DrawThemeTextProc		        *DrawThemeText;
     GetThemeTextExtentProc		*GetThemeTextExtent;
-    IsThemeActiveProc                   *IsThemeActive;
+    IsThemeActiveProc			*IsThemeActive;
+    IsAppThemedProc			*IsAppThemed;
 
     HWND                                stubWindow;
 } XPThemeProcs;
@@ -87,7 +89,8 @@ typedef struct
  */
 
 static XPThemeProcs *
-LoadXPThemeProcs(HINSTANCE *phlib)
+LoadXPThemeProcs(
+    HINSTANCE *phlib)
 {
     OSVERSIONINFO os;
 
@@ -125,6 +128,7 @@ LoadXPThemeProcs(HINSTANCE *phlib)
 		&& LOADPROC(GetThemeTextExtent)
 		&& LOADPROC(DrawThemeText)
 		&& LOADPROC(IsThemeActive)
+		&& LOADPROC(IsAppThemed)
 	    )
 	    {
 		return procs;
@@ -143,7 +147,8 @@ LoadXPThemeProcs(HINSTANCE *phlib)
  */
 
 static void
-XPThemeDeleteProc(void *clientData)
+XPThemeDeleteProc(
+    void *clientData)
 {
     XPThemeData *themeData = clientData;
     FreeLibrary(themeData->hlibrary);
@@ -151,10 +156,14 @@ XPThemeDeleteProc(void *clientData)
 }
 
 static int
-XPThemeEnabled(Ttk_Theme theme, void *clientData)
+XPThemeEnabled(
+    Ttk_Theme theme,
+    void *clientData)
 {
     XPThemeData *themeData = clientData;
-    return themeData->procs->IsThemeActive();
+    int active = themeData->procs->IsThemeActive();
+    int themed = themeData->procs->IsAppThemed();
+    return (active && themed);
 }
 
 /*
@@ -162,7 +171,8 @@ XPThemeEnabled(Ttk_Theme theme, void *clientData)
  * 	Helper routine.  Returns a RECT data structure.
  */
 static RECT
-BoxToRect(Ttk_Box b)
+BoxToRect(
+    Ttk_Box b)
 {
     RECT rc;
     rc.top = b.y;
@@ -402,7 +412,9 @@ typedef struct
 } ElementData;
 
 static ElementData *
-NewElementData(XPThemeProcs *procs, ElementInfo *info)
+NewElementData(
+    XPThemeProcs *procs,
+    ElementInfo *info)
 {
     ElementData *elementData = (ElementData*)ckalloc(sizeof(ElementData));
 
@@ -413,7 +425,9 @@ NewElementData(XPThemeProcs *procs, ElementInfo *info)
     return elementData;
 }
 
-static void DestroyElementData(void *elementData)
+static void
+DestroyElementData(
+    void *elementData)
 {
     ckfree(elementData);
 }
@@ -430,7 +444,10 @@ static void DestroyElementData(void *elementData)
  */
 
 static int
-InitElementData(ElementData *elementData, Tk_Window tkwin, Drawable d)
+InitElementData(
+    ElementData *elementData,
+    Tk_Window tkwin,
+    Drawable d)
 {
     Window win = Tk_WindowId(tkwin);
 
@@ -456,7 +473,8 @@ InitElementData(ElementData *elementData, Tk_Window tkwin, Drawable d)
 }
 
 static void
-FreeElementData(ElementData *elementData)
+FreeElementData(
+    ElementData *elementData)
 {
     elementData->procs->CloseThemeData(elementData->hTheme);
     if (elementData->drawable != 0) {
@@ -467,15 +485,19 @@ FreeElementData(ElementData *elementData)
 
 /*----------------------------------------------------------------------
  * +++ Generic element implementation.
- * 
+ *
  * Used for elements which are handled entirely by the XP Theme API,
  * such as radiobutton and checkbutton indicators, scrollbar arrows, etc.
  */
 
 static void
 GenericElementGeometry(
-    void *clientData, void *elementRecord, Tk_Window tkwin,
-    int *widthPtr, int *heightPtr, Ttk_Padding *paddingPtr)
+    void *clientData,
+    void *elementRecord,
+    Tk_Window tkwin,
+    int *widthPtr,
+    int *heightPtr,
+    Ttk_Padding *paddingPtr)
 {
     ElementData *elementData = clientData;
     HRESULT result;
@@ -507,8 +529,12 @@ GenericElementGeometry(
 
 static void
 GenericElementDraw(
-    void *clientData, void *elementRecord, Tk_Window tkwin,
-    Drawable d, Ttk_Box b, unsigned int state)
+    void *clientData,
+    void *elementRecord,
+    Tk_Window tkwin,
+    Drawable d,
+    Ttk_Box b,
+    unsigned int state)
 {
     ElementData *elementData = clientData;
     RECT rc;
@@ -549,8 +575,12 @@ static Ttk_ElementSpec GenericElementSpec =
 
 static void
 ThumbElementDraw(
-    void *clientData, void *elementRecord, Tk_Window tkwin,
-    Drawable d, Ttk_Box b, unsigned int state)
+    void *clientData,
+    void *elementRecord,
+    Tk_Window tkwin,
+    Drawable d,
+    Ttk_Box b,
+    unsigned int state)
 {
     ElementData *elementData = clientData;
     unsigned stateId = Ttk_StateTableLookup(elementData->info->statemap, state);
@@ -584,12 +614,17 @@ static Ttk_ElementSpec ThumbElementSpec =
 /*----------------------------------------------------------------------
  * +++ Progress bar element.
  *	Increases the requested length of PP_CHUNK and PP_CHUNKVERT parts
- *	so that indeterminate progress bars show 3 bars instead of 1.   
+ *	so that indeterminate progress bars show 3 bars instead of 1.
  */
 
-static void PbarElementGeometry(
-    void *clientData, void *elementRecord, Tk_Window tkwin,
-    int *widthPtr, int *heightPtr, Ttk_Padding *paddingPtr)
+static void
+PbarElementGeometry(
+    void *clientData,
+    void *elementRecord,
+    Tk_Window tkwin,
+    int *widthPtr,
+    int *heightPtr,
+    Ttk_Padding *paddingPtr)
 {
     ElementData *elementData = clientData;
     int nBars = 3;
@@ -617,19 +652,25 @@ static Ttk_ElementSpec PbarElementSpec =
  * +++  Notebook tab element.
  *	Same as generic element, with additional logic to select
  *	proper iPartID for the leftmost tab.
- * 	
- *	Notes: TABP_TABITEMRIGHTEDGE (or TABP_TOPTABITEMRIGHTEDGE, 
+ *
+ *	Notes: TABP_TABITEMRIGHTEDGE (or TABP_TOPTABITEMRIGHTEDGE,
  * 	which appears to be identical) should be used if the
  *	tab is exactly at the right edge of the notebook, but
  *	not if it's simply the rightmost tab.  This information
  * 	is not available.
  *
- *	The TIS_* and TILES_* definitions are identical, so 
+ *	The TIS_* and TILES_* definitions are identical, so
  * 	we can use the same statemap no matter what the partId.
  */
-static void TabElementDraw(
-    void *clientData, void *elementRecord, Tk_Window tkwin,
-    Drawable d, Ttk_Box b, unsigned int state)
+
+static void
+TabElementDraw(
+    void *clientData,
+    void *elementRecord,
+    Tk_Window tkwin,
+    Drawable d,
+    Ttk_Box b,
+    unsigned int state)
 {
     ElementData *elementData = clientData;
     int partId = elementData->info->partId;
@@ -663,7 +704,7 @@ static Ttk_ElementSpec TabElementSpec =
 #define TTK_STATE_OPEN TTK_STATE_USER1
 #define TTK_STATE_LEAF TTK_STATE_USER2
 
-static Ttk_StateTable header_statemap[] = 
+static Ttk_StateTable header_statemap[] =
 {
     { HIS_PRESSED, 	TTK_STATE_PRESSED, 0 },
     { HIS_HOT,  	TTK_STATE_ACTIVE, 0 },
@@ -676,9 +717,14 @@ static Ttk_StateTable tvpglyph_statemap[] =
     { GLPS_CLOSED, 	0,0 },
 };
 
-static void TreeIndicatorElementDraw(
-    void *clientData, void *elementRecord, Tk_Window tkwin,
-    Drawable d, Ttk_Box b, unsigned int state)
+static void
+TreeIndicatorElementDraw(
+    void *clientData,
+    void *elementRecord,
+    Tk_Window tkwin,
+    Drawable d,
+    Ttk_Box b,
+    unsigned int state)
 {
     if (!(state & TTK_STATE_LEAF)) {
         GenericElementDraw(clientData,elementRecord,tkwin,d,b,state);
@@ -700,11 +746,11 @@ static Ttk_ElementSpec TreeIndicatorElementSpec =
  *----------------------------------------------------------------------
  * Text element (does not work yet).
  *
- * According to "Using Windows XP Visual Styles",  we need to select 
+ * According to "Using Windows XP Visual Styles",  we need to select
  * a font into the DC before calling DrawThemeText().
  * There's just no easy way to get an HFONT out of a Tk_Font.
  * Maybe GetThemeFont() would work?
- * 
+ *
  */
 
 typedef struct
@@ -724,8 +770,12 @@ static Ttk_ElementOptionSpec TextElementOptions[] =
 
 static void
 TextElementGeometry(
-    void *clientData, void *elementRecord, Tk_Window tkwin,
-    int *widthPtr, int *heightPtr, Ttk_Padding *paddingPtr)
+    void *clientData,
+    void *elementRecord,
+    Tk_Window tkwin,
+    int *widthPtr,
+    int *heightPtr,
+    Ttk_Padding *paddingPtr)
 {
     TextElement *element = elementRecord;
     ElementData *elementData = clientData;
@@ -756,10 +806,14 @@ TextElementGeometry(
     FreeElementData(elementData);
 }
 
-static void 
+static void
 TextElementDraw(
-    ClientData clientData, void *elementRecord, Tk_Window tkwin,
-    Drawable d, Ttk_Box b, unsigned int state)
+    ClientData clientData,
+    void *elementRecord,
+    Tk_Window tkwin,
+    Drawable d,
+    Ttk_Box b,
+    unsigned int state)
 {
     TextElement *element = elementRecord;
     ElementData *elementData = clientData;

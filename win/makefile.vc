@@ -412,6 +412,7 @@ TK_INCLUDES	= -I"$(WINDIR)" -I"$(GENERICDIR)" -I"$(BITMAPDIR)" -I"$(XLIBDIR)" \
 CONFIG_DEFS     =-DSTDC_HEADERS=1 -DHAVE_SYS_TYPES_H=1 -DHAVE_SYS_STAT_H=1 \
 		 -DHAVE_STDLIB_H=1 -DHAVE_STRING_H=1 -DHAVE_MEMORY_H=1 \
 		 -DHAVE_STRINGS_H=1 -DHAVE_INTTYPES_H=1 -DHAVE_STDINT_H=1 \
+		 -DSUPPORT_CONFIG_EMBEDDED \
 !if $(HAVE_UXTHEME_H)
 		 -DHAVE_UXTHEME_H=1 \
 !endif
@@ -997,6 +998,12 @@ tidy:
 clean:
 	@echo Cleaning $(TMP_DIR)\* ...
 	@if exist $(TMP_DIR)\nul $(RMDIR) $(TMP_DIR)
+	@echo Cleaning $(WINDIR)\nmakehlp.obj ...
+	@if exist $(WINDIR)\nmakehlp.obj del $(WINDIR)\nmakehlp.obj
+	@echo Cleaning $(WINDIR)\nmakehlp.exe ...
+	@if exist $(WINDIR)\nmakehlp.exe del $(WINDIR)\nmakehlp.exe
+	@echo Cleaning $(WINDIR)\_junk.pch ...
+	@if exist $(WINDIR)\_junk.pch del $(WINDIR)\_junk.pch
 
 hose:
 	@echo Hosing $(OUT_DIR)\* ...

@@ -1,3 +1,105 @@
+2007-03-08  Joe English  <jenglish@users.sourceforge.net>
+
+	* tests/grid.test(grid-21.7): Reset wm geometry . and pack propagate .
+	at end of test.  'pack propagate . 0' was causing cascading failures in 
+	subsequent tests [Bug 1676770].
+
+2007-03-07  Daniel Steffen  <das@users.sourceforge.net>
+
+	* generic/tkMain.c (Tk_MainEx): replicate macosx-specific code from
+	TkpInit() that ensures the console window appears when wish is started
+	from the OS X Finder (i.e. with stdin == /dev/null), jeffh's 2006-11-24
+	change rendered the corresponding code in TkpInit() ineffective in wish
+	because Tk_MainEx() sets tcl_interactive before calling TkpInit().
+
+	* generic/ttk/ttkGenStubs.tcl (new): add ttk-specific genstubs.tcl from
+	* unix/Makefile.in (genstubs):       tile and run it from 'genstubs'
+	target, restores ability to generate all of Tk's stub sources.
+
+	* generic/ttk/ttkTreeview.c: #ifdef out unused declaration.
+
+	* macosx/tkMacOSXDebug.c (TkMacOSXGetNamedDebugSymbol): add fix for
+	libraries loaded with a DYLD_IMAGE_SUFFIX.
+
+	* macosx/Wish.xcodeproj/project.pbxproj: ensure gcc version used by
+	* macosx/Wish.xcodeproj/default.pbxuser: Xcode and configure/make are
+	* macosx/Wish-Common.xcconfig:		 consistent and independent of
+	gcc_select default and CC env var; fixes for Xcode 3.0.
+
+	* unix/tcl.m4 (Darwin): s/CFLAGS/CPPFLAGS/ in macosx-version-min check.
+	* unix/configure: autoconf-2.59
+
+2007-02-25  Peter Spjuth  <peter.spjuth@space.se>
+
+	* generic/tkUtil.c: Fixed grid anchor center problem in labelframes.
+	* tests/grid.test:  [Bug 1545765]
+
+2007-02-23  Jeff Hobbs  <jeffh@ActiveState.com>
+
+	* library/ttk/notebook.tcl (ttk::notebook::enableTraversal): OS X
+	needs Option instead of Alt binding
+
+2007-02-19  Jeff Hobbs  <jeffh@ActiveState.com>
+
+	* unix/tcl.m4: use SHLIB_SUFFIX=".so" on HP-UX ia64 arch.
+	* unix/configure: autoconf-2.59
+
+	* library/tkfbox.tcl (::tk::IconList_Goto): avoid goto issues in
+	empty dirs.  [Bug 1662959]
+
+2007-02-09  Joe Mistachkin  <joe@mistachkin.com>
+
+	* win/nmakehlp.c: Properly cleanup after nmakehlp, including the
+	* win/makefile.vc: vcX0.pch file.  Sync up fixed nmakehlp usage
+	from Tcl.
+
+2007-02-06  Joe English  <jenglish@users.sourceforge.net>
+
+	* library/ttk/ttk.tcl: Add no-op [package ifneeded] script
+	for tile 0.8.0, so that existing applications that use
+	"package require tile" won't fail when run under Tk 8.5.
+
+2007-02-04  Daniel Steffen  <das@users.sourceforge.net>
+
+	* unix/tcl.m4: use gcc4's __attribute__((__visibility__("hidden"))) if
+	available to define MODULE_SCOPE effective on all platforms.
+	* unix/configure.in: add caching to -pipe check.
+	* unix/configure: autoconf-2.59
+	* unix/tkConfig.h.in: autoheader-2.59
+
+2007-02-03  Joe Mistachkin  <joe@mistachkin.com>
+
+	* win/rules.vc: Fix platform specific file copy macros for downlevel
+	Windows.
+	* win/ttkWinMonitor.c: Windows portability support. Fix "noxp" build
+	* win/ttkWinXPTheme.c: option handling and use GetWindowLongPtr and
+	SetWindowLongPtr only when needed.
+
+2007-02-02  Pat Thoyts  <patthoyts@users.sourceforge.net>
+
+	* win/ttkWinXPTheme.c: Support IsAppThemed() call. This is what 
+	is used when theming is turned off just for an individual application.
+
+2007-01-28  Daniel Steffen  <das@users.sourceforge.net>
+
+	* macosx/Wish.xcodeproj/project.pbxproj:   extract build settings that
+	* macosx/Wish.xcodeproj/default.pbxuser:   were common to multiple
+	* macosx/Wish-Common.xcconfig (new file):  configurations into external
+	* macosx/Wish-Debug.xcconfig (new file):   xcconfig files; add extra
+	* macosx/Wish-Release.xcconfig (new file): configurations for building
+	with SDKs; convert legacy jam-based 'Tk' target to native target with
+	single script phase; correct syntax of build setting references to use
+	$() throughout; remove unused tcltest sources from 'tktest' target.
+
+	* macosx/README: document new Wish.xcodeproj configurations; other
+	minor updates/corrections.
+
+	* generic/tk.h: update location of version numbers in macosx files.
+
+	* macosx/Wish.xcode/project.pbxproj: restore 'tktest' target to working 
+	* macosx/Wish.xcode/default.pbxuser: order by replicating applicable
+	changes to Wish.xcodeproj since 2006-07-20.
+
 2007-01-25  Daniel Steffen  <das@users.sourceforge.net>
 
 	* unix/tcl.m4: integrate CPPFLAGS into CFLAGS as late as possible and
@@ -27,7 +129,7 @@
 
 2007-01-11  Joe English  <jenglish@users.sourceforge.net>
 
-	* win/tcl.m4(CFLAGS_WARNING): Remove "-Wconversion".
+	* win/tcl.m4 (CFLAGS_WARNING): Remove "-Wconversion".
 	This was removed from unix/tcl.m4 2004-07-16 but not from here.
 	* win/configure: Regenerated.
 

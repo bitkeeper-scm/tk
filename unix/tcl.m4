@@ -1086,6 +1086,25 @@ AC_DEFUN([SC_CONFIG_CFLAGS], [
 	do64bit=yes
     fi
 
+    # Step 0.c: Check if gcc visibility support is available. Do this here so
+    # that platform specific alternatives can be used below if this fails.
+
+    if test "$GCC" = "yes" ; then
+	AC_CACHE_CHECK([if gcc supports visibility "hidden"],
+	    tcl_cv_cc_visibility_hidden, [
+	    hold_cflags=$CFLAGS; CFLAGS="$CFLAGS -Werror"
+	    AC_TRY_LINK([
+		extern __attribute__((__visibility__("hidden"))) void f(void);
+		void f(void) {}], [f();], tcl_cv_cc_visibility_hidden=yes,
+		tcl_cv_cc_visibility_hidden=no)
+	    CFLAGS=$hold_cflags])
+	if test $tcl_cv_cc_visibility_hidden = yes; then
+	    AC_DEFINE(MODULE_SCOPE,
+		[extern __attribute__((__visibility__("hidden")))],
+		[Compiler support for module scope symbols])
+	fi
+    fi
+
     # Step 1: set the variable "system" to hold the name and version number
     # for the system.
 
@@ -1272,7 +1291,11 @@ dnl AC_CHECK_TOOL(AR, ar)
 	    AC_DEFINE(_XOPEN_SOURCE_EXTENDED, 1, [Do we want to use the XOPEN network library?])
 	    LIBS="$LIBS -lxnet"               # Use the XOPEN network library
 
-	    SHLIB_SUFFIX=".sl"
+	    if test "`uname -m`" = "ia64" ; then
+		SHLIB_SUFFIX=".so"
+	    else
+		SHLIB_SUFFIX=".sl"
+	    fi
 	    AC_CHECK_LIB(dld, shl_load, tcl_ok=yes, tcl_ok=no)
 	    if test "$tcl_ok" = yes; then
 		SHLIB_CFLAGS="+z"
@@ -1633,7 +1656,7 @@ dnl AC_CHECK_TOOL(AR, ar)
 	    DL_LIBS=""
 	    # Don't use -prebind when building for Mac OS X 10.4 or later only:
 	    test "`echo "${MACOSX_DEPLOYMENT_TARGET}" | awk -F '10\\.' '{print int([$]2)}'`" -lt 4 -a \
-		"`echo "${CFLAGS}" | awk -F '-mmacosx-version-min=10\\.' '{print int([$]2)}'`" -lt 4 && \
+		"`echo "${CPPFLAGS}" | awk -F '-mmacosx-version-min=10\\.' '{print int([$]2)}'`" -lt 4 && \
 		LDFLAGS="$LDFLAGS -prebind"
 	    LDFLAGS="$LDFLAGS -headerpad_max_install_names"
 	    AC_CACHE_CHECK([if ld accepts -search_paths_first flag], tcl_cv_ld_search_paths_first, [
@@ -1691,9 +1714,11 @@ dnl AC_CHECK_TOOL(AR, ar)
 		    fi
 		fi
 	    fi
+	    if test "$tcl_cv_cc_visibility_hidden" != yes; then
+		AC_DEFINE(MODULE_SCOPE, [__private_extern__],
+		    [Compiler support for module scope symbols])
+	    fi
 	    AC_DEFINE(MAC_OSX_TCL, 1, [Is this a Mac I see before me?])
-	    AC_DEFINE(MODULE_SCOPE, __private_extern__,
-		[Linker support for module scope symbols])
 	    ;;
 	NEXTSTEP-*)
 	    SHLIB_CFLAGS=""
