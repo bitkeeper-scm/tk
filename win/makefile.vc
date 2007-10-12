@@ -408,11 +408,6 @@ BITMAPDIR	= $(ROOT)\bitmaps
 DOCDIR		= $(ROOT)\doc
 RCDIR		= $(WINDIR)\rc
 
-!if $(TCLINSTALL)
-TCL_INCLUDES	= -I "$(_TCLDIR)\include"
-!else
-TCL_INCLUDES	= -I "$(_TCLDIR)\win" -I "$(_TCLDIR)\generic"
-!endif
 TK_INCLUDES	= -I"$(WINDIR)" -I"$(GENERICDIR)" -I"$(BITMAPDIR)" -I"$(XLIBDIR)" \
 			$(TCL_INCLUDES)
 
