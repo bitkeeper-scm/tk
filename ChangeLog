@@ -1,3 +1,24 @@
+2007-11-19  Don Porter  <dgp@users.sourceforge.net>
+
+	*** 8.5b3 TAGGED FOR RELEASE ***
+
+	* README:		Bump version number to 8.5b3.
+	* generic/tk.h:
+	* library/tk.tcl:
+	* unix/configure.in:
+	* unix/tk.spec:
+	* win/configure.in:
+
+	* unix/configure:	autoconf-2.59
+	* win/configure:
+
+	* changes:		Update changes for 8.5b3 release.
+
+2007-11-19  Pat Thoyts  <patthoyts@users.sourceforge.net>
+
+	* generic/ttk/ttkTheme.c: Fixed crash when 'style element create'
+	* tests/ttk/ttk.test:     called with insufficient args. Plus tests.
+
 2007-11-18  Joe English  <jenglish@users.sourceforge.net>
 
 	* generic/ttk/ttkElements.c, macosx/ttkMacOSXTheme.c: Add "fill"
