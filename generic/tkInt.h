@@ -67,6 +67,31 @@
 #endif
 
 /*
+ * Macros used to cast between pointers and integers (e.g. when storing an int
+ * in ClientData), on 64-bit architectures they avoid gcc warning about "cast
+ * to/from pointer from/to integer of different size".
+ */
+
+#if !defined(INT2PTR) && !defined(PTR2INT)
+#   if defined(HAVE_INTPTR_T) || defined(intptr_t)
+#	define INT2PTR(p) ((void*)(intptr_t)(p))
+#	define PTR2INT(p) ((int)(intptr_t)(p))
+#   else
+#	define INT2PTR(p) ((void*)(p))
+#	define PTR2INT(p) ((int)(p))
+#   endif
+#endif
+#if !defined(UINT2PTR) && !defined(PTR2UINT)
+#   if defined(HAVE_UINTPTR_T) || defined(uintptr_t)
+#	define UINT2PTR(p) ((void*)(uintptr_t)(p))
+#	define PTR2UINT(p) ((unsigned int)(uintptr_t)(p))
+#   else
+#	define UINT2PTR(p) ((void*)(p))
+#	define PTR2UINT(p) ((unsigned int)(p))
+#   endif
+#endif
+
+/*
  * Opaque type declarations:
  */
 
@@ -118,16 +143,6 @@ typedef struct TkCursor {
 				 * but different displays are chained together
 				 * off a single hash table entry. */
 } TkCursor;
-
-/*
- * This defines whether we should try to use XIM over-the-spot style input.
- * Allow users to override it. It is a much more elegant use of XIM, but uses
- * a bit more memory.
- */
-
-#ifndef TK_XIM_SPOT
-#define TK_XIM_SPOT	1
-#endif
 
 /*
  * The following structure is kept one-per-TkDisplay to maintain information
@@ -192,7 +207,8 @@ typedef struct TkDisplay {
 				 * corresponding to the "Meta" key. If no such
 				 * modifier, then this is zero. */
     enum {LU_IGNORE, LU_CAPS, LU_SHIFT} lockUsage;
-				/* Indicates how to interpret lock modifier */
+				/* Indicates how to interpret lock
+				 * modifier. */
     int numModKeyCodes;		/* Number of entries in modKeyCodes array
 				 * below. */
     KeyCode *modKeyCodes;	/* Pointer to an array giving keycodes for all
@@ -503,22 +519,23 @@ typedef struct TkDisplay {
      */
 
 #ifdef TK_USE_INPUT_METHODS
-    XIM inputMethod;		/* Input method for this display */
-#if TK_XIM_SPOT
+    XIM inputMethod;		/* Input method for this display. */
+    XIMStyle inputStyle;	/* Input style selected for this display. */
     XFontSet inputXfs;		/* XFontSet cached for over-the-spot XIM. */
-#endif
 #endif /* TK_USE_INPUT_METHODS */
     Tcl_HashTable winTable;	/* Maps from X window ids to TkWindow ptrs. */
 
     int refCount;		/* Reference count of how many Tk applications
-                                 * are using this display. Used to clean up
-                                 * the display when we no longer have any Tk
-                                 * applications using it. */
+				 * are using this display. Used to clean up
+				 * the display when we no longer have any Tk
+				 * applications using it. */
+
     /*
      * The following field were all added for Tk8.3
      */
+
     int mouseButtonState;	/* Current mouse button state for this
-				 * display */
+				 * display. */
     Window mouseButtonWindow;	/* Window the button state was set in, added
 				 * in Tk 8.4. */
     Window warpWindow;
@@ -534,8 +551,8 @@ typedef struct TkDisplay {
     TkCaret caret;		/* Information about the caret for this
 				 * display. This is not a pointer. */
 
-    int iconDataSize;		/* Size of default iconphoto image data */
-    unsigned char *iconDataPtr;	/* Default iconphoto image data, if set */
+    int iconDataSize;		/* Size of default iconphoto image data. */
+    unsigned char *iconDataPtr;	/* Default iconphoto image data, if set. */
 } TkDisplay;
 
 /*
@@ -544,8 +561,6 @@ typedef struct TkDisplay {
  *	Indicates that we should collapse motion events on this display
  *  TK_DISPLAY_USE_IM:			(default on, set via tk.tcl)
  *	Whether to use input methods for this display
- *  TK_DISPLAY_XIM_SPOT:		(default off)
- *	Indicates that we should use over-the-spot XIM on this display
  *  TK_DISPLAY_WM_TRACING:		(default off)
  *	Whether we should do wm tracing on this display.
  *  TK_DISPLAY_IN_WARP:			(default off)
@@ -554,7 +569,6 @@ typedef struct TkDisplay {
 
 #define TK_DISPLAY_COLLAPSE_MOTION_EVENTS	(1 << 0)
 #define TK_DISPLAY_USE_IM			(1 << 1)
-#define TK_DISPLAY_XIM_SPOT			(1 << 2)
 #define TK_DISPLAY_WM_TRACING			(1 << 3)
 #define TK_DISPLAY_IN_WARP			(1 << 4)
 
@@ -620,7 +634,7 @@ typedef struct TkMainInfo {
     Tcl_HashTable nameTable;	/* Hash table mapping path names to TkWindow
 				 * structs for all windows related to this
 				 * main window. Managed by tkWindow.c. */
-    long deletionEpoch;		/* Incremented by window deletions */
+    long deletionEpoch;		/* Incremented by window deletions. */
     Tk_BindingTable bindingTable;
 				/* Used in conjunction with "bind" command to
 				 * bind events to Tcl commands. */
@@ -854,7 +868,7 @@ typedef struct TkStateMap {
  */
 
 typedef struct TkpClipMask {
-    int type;			/* One of TKP_CLIP_PIXMAP or TKP_CLIP_REGION */
+    int type;			/* TKP_CLIP_PIXMAP or TKP_CLIP_REGION. */
     union {
 	Pixmap pixmap;
 	TkRegion region;
@@ -1152,6 +1166,7 @@ MODULE_SCOPE int	TkTileParseProc(ClientData clientData,
 MODULE_SCOPE char *	TkTilePrintProc(ClientData clientData, Tk_Window tkwin,
 			    char *widgRec, int offset,
 			    Tcl_FreeProc **freeProcPtr);
+MODULE_SCOPE void       TkMapTopFrame(Tk_Window tkwin);
 MODULE_SCOPE XEvent *	TkpGetBindingXEvent(Tcl_Interp *interp);
 MODULE_SCOPE void	TkCreateExitHandler(Tcl_ExitProc *proc,
 			    ClientData clientData);
@@ -1168,22 +1183,23 @@ MODULE_SCOPE void	TkPrintPadAmount(Tcl_Interp *interp,
 MODULE_SCOPE int	TkParsePadAmount(Tcl_Interp *interp,
 			    Tk_Window tkwin, Tcl_Obj *objPtr,
 			    int *pad1Ptr, int *pad2Ptr);
+MODULE_SCOPE void       TkFocusSplit(TkWindow *winPtr);
+MODULE_SCOPE void       TkFocusJoin(TkWindow *winPtr);
 MODULE_SCOPE int	TkpAlwaysShowSelection(Tk_Window tkwin);
 MODULE_SCOPE void	TkpDrawCharsInContext(Display * display,
 			    Drawable drawable, GC gc, Tk_Font tkfont,
-			    const char * source, int numBytes, int rangeStart,
+			    const char *source, int numBytes, int rangeStart,
 			    int rangeLength, int x, int y);
 MODULE_SCOPE int	TkpMeasureCharsInContext(Tk_Font tkfont,
-			    const char * source, int numBytes, int rangeStart,
+			    const char *source, int numBytes, int rangeStart,
 			    int rangeLength, int maxLength, int flags,
-			    int * lengthPtr);
+			    int *lengthPtr);
 MODULE_SCOPE void	TkUnderlineCharsInContext(Display *display,
 			    Drawable drawable, GC gc, Tk_Font tkfont,
 			    const char *string, int numBytes, int x, int y,
 			    int firstByte, int lastByte);
 MODULE_SCOPE void	TkpGetFontAttrsForChar(Tk_Window tkwin, Tk_Font tkfont,
-					       Tcl_UniChar c, 
-					       struct TkFontAttributes *faPtr);
+			    Tcl_UniChar c, struct TkFontAttributes *faPtr);
 
 /*
  * Unsupported commands.

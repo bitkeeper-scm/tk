@@ -13,6 +13,9 @@
 /* Do we have access to Darwin CoreFoundation.framework? */
 #undef HAVE_COREFOUNDATION
 
+/* Do we have the intptr_t type? */
+#undef HAVE_INTPTR_T
+
 /* Define to 1 if you have the <inttypes.h> header file. */
 #undef HAVE_INTTYPES_H
 
@@ -79,6 +82,9 @@
 /* Is off64_t in <sys/types.h>? */
 #undef HAVE_TYPE_OFF64_T
 
+/* Do we have the uintptr_t type? */
+#undef HAVE_UINTPTR_T
+
 /* Define to 1 if you have the <unistd.h> header file. */
 #undef HAVE_UNISTD_H
 
@@ -123,9 +129,6 @@
 
 /* Define to the version of this package. */
 #undef PACKAGE_VERSION
-
-/* May we use XIM peeking safely? */
-#undef PEEK_XCLOSEIM
 
 /* Is this a static build? */
 #undef STATIC_BUILD
@@ -217,6 +220,9 @@
 /* Define to `int' if <sys/types.h> doesn't define. */
 #undef gid_t
 
+/* Signed integer type wide enough to hold a pointer. */
+#undef intptr_t
+
 /* Define to `int' if <sys/types.h> does not define. */
 #undef mode_t
 
@@ -231,6 +237,9 @@
 
 /* Define to `int' if <sys/types.h> doesn't define. */
 #undef uid_t
+
+/* Unsigned integer type wide enough to hold a pointer. */
+#undef uintptr_t
 
 
     /* Undef unused package specific autoheader defines so that we can

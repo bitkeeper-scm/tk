@@ -19,8 +19,7 @@
 
 #ifndef HAVE_UXTHEME_H
 /* Stub for platforms that lack the XP theme API headers: */
-#include <windows.h>
-#include <tcl.h>
+#include <tkWinInt.h>
 int TtkXPTheme_Init(Tcl_Interp *interp, HWND hwnd) { return TCL_OK; }
 #else
 
@@ -44,6 +43,7 @@ typedef HRESULT (STDAPICALLTYPE DrawThemeBackgroundProc)(HTHEME hTheme,
 typedef HRESULT	(STDAPICALLTYPE GetThemePartSizeProc)(HTHEME,HDC,
 		 int iPartId, int iStateId,
 		 RECT *prc, enum THEMESIZE eSize, SIZE *psz);
+typedef int     (STDAPICALLTYPE GetThemeSysSizeProc)(HTHEME,int);
 /* GetThemeTextExtent and DrawThemeText only used with BROKEN_TEXT_ELEMENT */ 
 typedef HRESULT (STDAPICALLTYPE GetThemeTextExtentProc)(HTHEME hTheme, HDC hdc,
 		 int iPartId, int iStateId, LPCWSTR pszText, int iCharCount,
@@ -59,6 +59,7 @@ typedef struct
     OpenThemeDataProc			*OpenThemeData;
     CloseThemeDataProc			*CloseThemeData;
     GetThemePartSizeProc		*GetThemePartSize;
+    GetThemeSysSizeProc			*GetThemeSysSize;
     DrawThemeBackgroundProc		*DrawThemeBackground;
     DrawThemeTextProc		        *DrawThemeText;
     GetThemeTextExtentProc		*GetThemeTextExtent;
@@ -89,53 +90,40 @@ typedef struct
  */
 
 static XPThemeProcs *
-LoadXPThemeProcs(
-    HINSTANCE *phlib)
+LoadXPThemeProcs(HINSTANCE *phlib)
 {
-    OSVERSIONINFO os;
-
     /*
-     * We have to check whether we are running at least on Windows XP.
-     * In order to determine this we call GetVersionEx directly, although
-     * it would be a good idea to wrap it inside a function similar to
-     * TkWinGetPlatformId...
+     * Load the library "uxtheme.dll", where the native widget
+     * drawing routines are implemented.  This will only succeed 
+     * if we are running at least on Windows XP.
      */
-    ZeroMemory(&os, sizeof(os));
-    os.dwOSVersionInfoSize = sizeof(OSVERSIONINFO);
-    GetVersionEx(&os);
-    if (os.dwMajorVersion >= 5 && os.dwMinorVersion >= 1) {
+    HINSTANCE handle;
+    *phlib = handle = LoadLibrary("uxtheme.dll");
+    if (handle != 0)
+    {
 	/*
-	 * We are running under Windows XP or a newer version.
-	 * Load the library "uxtheme.dll", where the native widget
-	 * drawing routines are implemented.
+	 * We have successfully loaded the library. Proceed in storing the
+	 * addresses of the functions we want to use.
 	 */
-	HINSTANCE handle;
-	*phlib = handle = LoadLibrary("uxtheme.dll");
-	if (handle != 0)
-	{
-	    /*
-	     * We have successfully loaded the library. Proceed in storing the
-	     * addresses of the functions we want to use.
-	     */
-	    XPThemeProcs *procs = (XPThemeProcs*)ckalloc(sizeof(XPThemeProcs));
+	XPThemeProcs *procs = (XPThemeProcs*)ckalloc(sizeof(XPThemeProcs));
 #define LOADPROC(name) \
 	(0 != (procs->name = (name ## Proc *)GetProcAddress(handle, #name) ))
 
-	    if (   LOADPROC(OpenThemeData)
-		&& LOADPROC(CloseThemeData)
-		&& LOADPROC(GetThemePartSize)
-		&& LOADPROC(DrawThemeBackground)
-		&& LOADPROC(GetThemeTextExtent)
-		&& LOADPROC(DrawThemeText)
-		&& LOADPROC(IsThemeActive)
-		&& LOADPROC(IsAppThemed)
-	    )
-	    {
-		return procs;
-	    }
-#undef LOADPROC
-	    ckfree((char*)procs);
+	if (   LOADPROC(OpenThemeData)
+	    && LOADPROC(CloseThemeData)
+	    && LOADPROC(GetThemePartSize)
+	    && LOADPROC(GetThemeSysSize)
+	    && LOADPROC(DrawThemeBackground)
+	    && LOADPROC(GetThemeTextExtent)
+	    && LOADPROC(DrawThemeText)
+	    && LOADPROC(IsThemeActive)
+	    && LOADPROC(IsAppThemed)
+	)
+	{
+	    return procs;
 	}
+#undef LOADPROC
+	ckfree((char*)procs);
     }
     return 0;
 }
@@ -147,8 +135,7 @@ LoadXPThemeProcs(
  */
 
 static void
-XPThemeDeleteProc(
-    void *clientData)
+XPThemeDeleteProc(void *clientData)
 {
     XPThemeData *themeData = clientData;
     FreeLibrary(themeData->hlibrary);
@@ -156,9 +143,7 @@ XPThemeDeleteProc(
 }
 
 static int
-XPThemeEnabled(
-    Ttk_Theme theme,
-    void *clientData)
+XPThemeEnabled(Ttk_Theme theme, void *clientData)
 {
     XPThemeData *themeData = clientData;
     int active = themeData->procs->IsThemeActive();
@@ -171,8 +156,7 @@ XPThemeEnabled(
  * 	Helper routine.  Returns a RECT data structure.
  */
 static RECT
-BoxToRect(
-    Ttk_Box b)
+BoxToRect(Ttk_Box b)
 {
     RECT rc;
     rc.top = b.y;
@@ -387,8 +371,8 @@ typedef struct 	/* XP element specifications */
     Ttk_StateTable *statemap;	/* Map Tk states to XP states */
     Ttk_Padding	padding;	/* See NOTE-GetThemeMargins */
     int  	flags;		
-#   define 	IGNORE_THEMESIZE 	0x1 /* See NOTE-GetThemePartSize */
-#   define 	PAD_MARGINS		0x2 /* See NOTE-GetThemeMargins */
+#   define 	IGNORE_THEMESIZE 0x80000000 /* See NOTE-GetThemePartSize */
+#   define 	PAD_MARGINS	 0x40000000 /* See NOTE-GetThemeMargins */
 } ElementInfo;
 
 typedef struct
@@ -412,9 +396,7 @@ typedef struct
 } ElementData;
 
 static ElementData *
-NewElementData(
-    XPThemeProcs *procs,
-    ElementInfo *info)
+NewElementData(XPThemeProcs *procs, ElementInfo *info)
 {
     ElementData *elementData = (ElementData*)ckalloc(sizeof(ElementData));
 
@@ -425,9 +407,7 @@ NewElementData(
     return elementData;
 }
 
-static void
-DestroyElementData(
-    void *elementData)
+static void DestroyElementData(void *elementData)
 {
     ckfree(elementData);
 }
@@ -444,10 +424,7 @@ DestroyElementData(
  */
 
 static int
-InitElementData(
-    ElementData *elementData,
-    Tk_Window tkwin,
-    Drawable d)
+InitElementData(ElementData *elementData, Tk_Window tkwin, Drawable d)
 {
     Window win = Tk_WindowId(tkwin);
 
@@ -473,8 +450,7 @@ InitElementData(
 }
 
 static void
-FreeElementData(
-    ElementData *elementData)
+FreeElementData(ElementData *elementData)
 {
     elementData->procs->CloseThemeData(elementData->hTheme);
     if (elementData->drawable != 0) {
@@ -485,19 +461,14 @@ FreeElementData(
 
 /*----------------------------------------------------------------------
  * +++ Generic element implementation.
- *
+ * 
  * Used for elements which are handled entirely by the XP Theme API,
  * such as radiobutton and checkbutton indicators, scrollbar arrows, etc.
  */
 
-static void
-GenericElementGeometry(
-    void *clientData,
-    void *elementRecord,
-    Tk_Window tkwin,
-    int *widthPtr,
-    int *heightPtr,
-    Ttk_Padding *paddingPtr)
+static void GenericElementSize(
+    void *clientData, void *elementRecord, Tk_Window tkwin,
+    int *widthPtr, int *heightPtr, Ttk_Padding *paddingPtr)
 {
     ElementData *elementData = clientData;
     HRESULT result;
@@ -525,16 +496,15 @@ GenericElementGeometry(
     /* See NOTE-GetThemeMargins 
      */
     *paddingPtr = elementData->info->padding;
+    if (elementData->info->flags & PAD_MARGINS) {
+	*widthPtr += Ttk_PaddingWidth(elementData->info->padding);
+	*heightPtr += Ttk_PaddingHeight(elementData->info->padding);
+    }
 }
 
-static void
-GenericElementDraw(
-    void *clientData,
-    void *elementRecord,
-    Tk_Window tkwin,
-    Drawable d,
-    Ttk_Box b,
-    unsigned int state)
+static void GenericElementDraw(
+    void *clientData, void *elementRecord, Tk_Window tkwin,
+    Drawable d, Ttk_Box b, unsigned int state)
 {
     ElementData *elementData = clientData;
     RECT rc;
@@ -564,7 +534,42 @@ static Ttk_ElementSpec GenericElementSpec =
     TK_STYLE_VERSION_2,
     sizeof(NullElement),
     TtkNullElementOptions,
-    GenericElementGeometry,
+    GenericElementSize,
+    GenericElementDraw
+};
+
+/*----------------------------------------------------------------------
+ * +++ Sized element implementation.
+ * 
+ * Used for elements which are handled entirely by the XP Theme API,
+ * but that require a fixed size adjustment.
+ * Note that GetThemeSysSize calls through to GetSystemMetrics
+ */
+
+static void
+GenericSizedElementSize(
+    void *clientData, void *elementRecord, Tk_Window tkwin,
+    int *widthPtr, int *heightPtr, Ttk_Padding *paddingPtr)
+{
+    ElementData *elementData = clientData;
+
+    if (!InitElementData(elementData, tkwin, 0))
+	return;
+
+    GenericElementSize(clientData, elementRecord, tkwin,
+	widthPtr, heightPtr, paddingPtr);
+
+    *widthPtr = elementData->procs->GetThemeSysSize(NULL,
+	(elementData->info->flags >> 8) & 0xff);
+    *heightPtr = elementData->procs->GetThemeSysSize(NULL,
+	elementData->info->flags & 0xff);
+}
+
+static Ttk_ElementSpec GenericSizedElementSpec = {
+    TK_STYLE_VERSION_2,
+    sizeof(NullElement),
+    TtkNullElementOptions,
+    GenericSizedElementSize,
     GenericElementDraw
 };
 
@@ -573,14 +578,9 @@ static Ttk_ElementSpec GenericElementSpec =
  *     Same as a GenericElement, but don't draw in the disabled state.
  */
 
-static void
-ThumbElementDraw(
-    void *clientData,
-    void *elementRecord,
-    Tk_Window tkwin,
-    Drawable d,
-    Ttk_Box b,
-    unsigned int state)
+static void ThumbElementDraw(
+    void *clientData, void *elementRecord, Tk_Window tkwin,
+    Drawable d, Ttk_Box b, unsigned int state)
 {
     ElementData *elementData = clientData;
     unsigned stateId = Ttk_StateTableLookup(elementData->info->statemap, state);
@@ -607,29 +607,24 @@ static Ttk_ElementSpec ThumbElementSpec =
     TK_STYLE_VERSION_2,
     sizeof(NullElement),
     TtkNullElementOptions,
-    GenericElementGeometry,
+    GenericElementSize,
     ThumbElementDraw
 };
 
 /*----------------------------------------------------------------------
  * +++ Progress bar element.
  *	Increases the requested length of PP_CHUNK and PP_CHUNKVERT parts
- *	so that indeterminate progress bars show 3 bars instead of 1.
+ *	so that indeterminate progress bars show 3 bars instead of 1.   
  */
 
-static void
-PbarElementGeometry(
-    void *clientData,
-    void *elementRecord,
-    Tk_Window tkwin,
-    int *widthPtr,
-    int *heightPtr,
-    Ttk_Padding *paddingPtr)
+static void PbarElementSize(
+    void *clientData, void *elementRecord, Tk_Window tkwin,
+    int *widthPtr, int *heightPtr, Ttk_Padding *paddingPtr)
 {
     ElementData *elementData = clientData;
     int nBars = 3;
 
-    GenericElementGeometry(clientData, elementRecord, tkwin,
+    GenericElementSize(clientData, elementRecord, tkwin,
     	widthPtr, heightPtr, paddingPtr);
 
     if (elementData->info->partId == PP_CHUNK) {
@@ -644,7 +639,7 @@ static Ttk_ElementSpec PbarElementSpec =
     TK_STYLE_VERSION_2,
     sizeof(NullElement),
     TtkNullElementOptions,
-    PbarElementGeometry,
+    PbarElementSize,
     GenericElementDraw
 };
 
@@ -652,25 +647,19 @@ static Ttk_ElementSpec PbarElementSpec =
  * +++  Notebook tab element.
  *	Same as generic element, with additional logic to select
  *	proper iPartID for the leftmost tab.
- *
- *	Notes: TABP_TABITEMRIGHTEDGE (or TABP_TOPTABITEMRIGHTEDGE,
+ * 	
+ *	Notes: TABP_TABITEMRIGHTEDGE (or TABP_TOPTABITEMRIGHTEDGE, 
  * 	which appears to be identical) should be used if the
  *	tab is exactly at the right edge of the notebook, but
  *	not if it's simply the rightmost tab.  This information
  * 	is not available.
  *
- *	The TIS_* and TILES_* definitions are identical, so
+ *	The TIS_* and TILES_* definitions are identical, so 
  * 	we can use the same statemap no matter what the partId.
  */
-
-static void
-TabElementDraw(
-    void *clientData,
-    void *elementRecord,
-    Tk_Window tkwin,
-    Drawable d,
-    Ttk_Box b,
-    unsigned int state)
+static void TabElementDraw(
+    void *clientData, void *elementRecord, Tk_Window tkwin,
+    Drawable d, Ttk_Box b, unsigned int state)
 {
     ElementData *elementData = clientData;
     int partId = elementData->info->partId;
@@ -691,7 +680,7 @@ static Ttk_ElementSpec TabElementSpec =
     TK_STYLE_VERSION_2,
     sizeof(NullElement),
     TtkNullElementOptions,
-    GenericElementGeometry,
+    GenericElementSize,
     TabElementDraw
 };
 
@@ -704,7 +693,7 @@ static Ttk_ElementSpec TabElementSpec =
 #define TTK_STATE_OPEN TTK_STATE_USER1
 #define TTK_STATE_LEAF TTK_STATE_USER2
 
-static Ttk_StateTable header_statemap[] =
+static Ttk_StateTable header_statemap[] = 
 {
     { HIS_PRESSED, 	TTK_STATE_PRESSED, 0 },
     { HIS_HOT,  	TTK_STATE_ACTIVE, 0 },
@@ -717,14 +706,9 @@ static Ttk_StateTable tvpglyph_statemap[] =
     { GLPS_CLOSED, 	0,0 },
 };
 
-static void
-TreeIndicatorElementDraw(
-    void *clientData,
-    void *elementRecord,
-    Tk_Window tkwin,
-    Drawable d,
-    Ttk_Box b,
-    unsigned int state)
+static void TreeIndicatorElementDraw(
+    void *clientData, void *elementRecord, Tk_Window tkwin,
+    Drawable d, Ttk_Box b, unsigned int state)
 {
     if (!(state & TTK_STATE_LEAF)) {
         GenericElementDraw(clientData,elementRecord,tkwin,d,b,state);
@@ -736,7 +720,7 @@ static Ttk_ElementSpec TreeIndicatorElementSpec =
     TK_STYLE_VERSION_2,
     sizeof(NullElement),
     TtkNullElementOptions,
-    GenericElementGeometry,
+    GenericElementSize,
     TreeIndicatorElementDraw
 };
 
@@ -746,11 +730,11 @@ static Ttk_ElementSpec TreeIndicatorElementSpec =
  *----------------------------------------------------------------------
  * Text element (does not work yet).
  *
- * According to "Using Windows XP Visual Styles",  we need to select
+ * According to "Using Windows XP Visual Styles",  we need to select 
  * a font into the DC before calling DrawThemeText().
  * There's just no easy way to get an HFONT out of a Tk_Font.
  * Maybe GetThemeFont() would work?
- *
+ * 
  */
 
 typedef struct
@@ -768,14 +752,9 @@ static Ttk_ElementOptionSpec TextElementOptions[] =
     { NULL }
 };
 
-static void
-TextElementGeometry(
-    void *clientData,
-    void *elementRecord,
-    Tk_Window tkwin,
-    int *widthPtr,
-    int *heightPtr,
-    Ttk_Padding *paddingPtr)
+static void TextElementSize(
+    void *clientData, void *elementRecord, Tk_Window tkwin,
+    int *widthPtr, int *heightPtr, Ttk_Padding *paddingPtr)
 {
     TextElement *element = elementRecord;
     ElementData *elementData = clientData;
@@ -806,14 +785,9 @@ TextElementGeometry(
     FreeElementData(elementData);
 }
 
-static void
-TextElementDraw(
-    ClientData clientData,
-    void *elementRecord,
-    Tk_Window tkwin,
-    Drawable d,
-    Ttk_Box b,
-    unsigned int state)
+static void TextElementDraw(
+    ClientData clientData, void *elementRecord, Tk_Window tkwin,
+    Drawable d, Ttk_Box b, unsigned int state)
 {
     TextElement *element = elementRecord;
     ElementData *elementData = clientData;
@@ -841,7 +815,7 @@ static Ttk_ElementSpec TextElementSpec =
     TK_STYLE_VERSION_2,
     sizeof(TextElement),
     TextElementOptions,
-    TextElementGeometry,
+    TextElementSize,
     TextElementDraw
 };
 
@@ -851,49 +825,47 @@ static Ttk_ElementSpec TextElementSpec =
  * +++ Widget layouts:
  */
 
-TTK_BEGIN_LAYOUT(ButtonLayout)
+TTK_BEGIN_LAYOUT_TABLE(LayoutTable)
+
+TTK_LAYOUT("TButton",
     TTK_GROUP("Button.button", TTK_FILL_BOTH,
 	TTK_GROUP("Button.focus", TTK_FILL_BOTH, 
 	    TTK_GROUP("Button.padding", TTK_FILL_BOTH,
-		TTK_NODE("Button.label", TTK_FILL_BOTH))))
-TTK_END_LAYOUT
+		TTK_NODE("Button.label", TTK_FILL_BOTH)))))
 
-TTK_BEGIN_LAYOUT(MenubuttonLayout)
+TTK_LAYOUT("TMenubutton",
     TTK_NODE("Menubutton.dropdown", TTK_PACK_RIGHT|TTK_FILL_Y)
     TTK_GROUP("Menubutton.button", TTK_PACK_RIGHT|TTK_EXPAND|TTK_FILL_BOTH,
 	    TTK_GROUP("Menubutton.padding", TTK_PACK_LEFT|TTK_EXPAND|TTK_FILL_X,
-	        TTK_NODE("Menubutton.label", 0)))
-TTK_END_LAYOUT
+	        TTK_NODE("Menubutton.label", 0))))
 
-TTK_BEGIN_LAYOUT(HorizontalScrollbarLayout)
+TTK_LAYOUT("Horizontal.TScrollbar",
     TTK_GROUP("Horizontal.Scrollbar.trough", TTK_FILL_X,
 	TTK_NODE("Horizontal.Scrollbar.leftarrow", TTK_PACK_LEFT)
 	TTK_NODE("Horizontal.Scrollbar.rightarrow", TTK_PACK_RIGHT)
 	TTK_GROUP("Horizontal.Scrollbar.thumb", TTK_FILL_BOTH|TTK_UNIT,
-	    TTK_NODE("Horizontal.Scrollbar.grip", 0)))
-TTK_END_LAYOUT
+	    TTK_NODE("Horizontal.Scrollbar.grip", 0))))
 
-TTK_BEGIN_LAYOUT(VerticalScrollbarLayout)
+TTK_LAYOUT("Vertical.TScrollbar",
     TTK_GROUP("Vertical.Scrollbar.trough", TTK_FILL_Y,
 	TTK_NODE("Vertical.Scrollbar.uparrow", TTK_PACK_TOP)
 	TTK_NODE("Vertical.Scrollbar.downarrow", TTK_PACK_BOTTOM)
 	TTK_GROUP("Vertical.Scrollbar.thumb", TTK_FILL_BOTH|TTK_UNIT,
-	    TTK_NODE("Vertical.Scrollbar.grip", 0)))
-TTK_END_LAYOUT
+	    TTK_NODE("Vertical.Scrollbar.grip", 0))))
 
-TTK_BEGIN_LAYOUT(VerticalScaleLayout)
-    TTK_GROUP("Scale.focus", TTK_EXPAND|TTK_FILL_BOTH,
-	TTK_GROUP("Vertical.Scale.trough", TTK_EXPAND|TTK_FILL_BOTH,
-	    TTK_NODE("Vertical.Scale.track", TTK_FILL_Y)
-	    TTK_NODE("Vertical.Scale.slider", TTK_PACK_TOP) ))
-TTK_END_LAYOUT
-
-TTK_BEGIN_LAYOUT(HorizontalScaleLayout)
+TTK_LAYOUT("Horizontal.TScale",
     TTK_GROUP("Scale.focus", TTK_EXPAND|TTK_FILL_BOTH,
 	TTK_GROUP("Horizontal.Scale.trough", TTK_EXPAND|TTK_FILL_BOTH,
 	    TTK_NODE("Horizontal.Scale.track", TTK_FILL_X) 
-	    TTK_NODE("Horizontal.Scale.slider", TTK_PACK_LEFT) ))
-TTK_END_LAYOUT
+	    TTK_NODE("Horizontal.Scale.slider", TTK_PACK_LEFT) )))
+
+TTK_LAYOUT("Vertical.TScale",
+    TTK_GROUP("Scale.focus", TTK_EXPAND|TTK_FILL_BOTH,
+	TTK_GROUP("Vertical.Scale.trough", TTK_EXPAND|TTK_FILL_BOTH,
+	    TTK_NODE("Vertical.Scale.track", TTK_FILL_Y)
+	    TTK_NODE("Vertical.Scale.slider", TTK_PACK_TOP) )))
+
+TTK_END_LAYOUT_TABLE
 
 /*----------------------------------------------------------------------
  * +++ XP element info table: 
@@ -917,8 +889,9 @@ static ElementInfo ElementInfoTable[] = {
     	edittext_statemap, PAD(1, 1, 1, 1), 0 },
     { "Combobox.field", &GenericElementSpec, L"EDIT",
 	EP_EDITTEXT, combotext_statemap, PAD(1, 1, 1, 1), 0 },
-    { "Combobox.downarrow", &GenericElementSpec, L"COMBOBOX",
-	CP_DROPDOWNBUTTON, combobox_statemap, NOPAD, 0 },
+    { "Combobox.downarrow", &GenericSizedElementSpec, L"COMBOBOX",
+	CP_DROPDOWNBUTTON, combobox_statemap, NOPAD,
+	(SM_CXVSCROLL << 8) | SM_CYVSCROLL },
     { "Vertical.Scrollbar.trough", &GenericElementSpec, L"SCROLLBAR",
     	SBP_UPPERTRACKVERT, scrollbar_statemap, NOPAD, 0 },
     { "Vertical.Scrollbar.thumb", &ThumbElementSpec, L"SCROLLBAR",
@@ -931,14 +904,18 @@ static ElementInfo ElementInfoTable[] = {
    	SBP_THUMBBTNHORZ, scrollbar_statemap, NOPAD, 0 },
     { "Horizontal.Scrollbar.grip", &GenericElementSpec, L"SCROLLBAR",
     	SBP_GRIPPERHORZ, scrollbar_statemap, NOPAD, 0 },
-    { "Scrollbar.uparrow", &GenericElementSpec, L"SCROLLBAR",
-    	SBP_ARROWBTN, uparrow_statemap, NOPAD, 0 },
-    { "Scrollbar.downarrow", &GenericElementSpec, L"SCROLLBAR",
-    	SBP_ARROWBTN, downarrow_statemap, NOPAD, 0 },
-    { "Scrollbar.leftarrow", &GenericElementSpec, L"SCROLLBAR",
-    	SBP_ARROWBTN, leftarrow_statemap, NOPAD, 0 },
-    { "Scrollbar.rightarrow", &GenericElementSpec, L"SCROLLBAR",
-    	SBP_ARROWBTN, rightarrow_statemap, NOPAD, 0 },
+    { "Scrollbar.uparrow", &GenericSizedElementSpec, L"SCROLLBAR",
+    	SBP_ARROWBTN, uparrow_statemap, NOPAD,
+	(SM_CXVSCROLL << 8) | SM_CYVSCROLL },
+    { "Scrollbar.downarrow", &GenericSizedElementSpec, L"SCROLLBAR",
+    	SBP_ARROWBTN, downarrow_statemap, NOPAD,
+	(SM_CXVSCROLL << 8) | SM_CYVSCROLL },
+    { "Scrollbar.leftarrow", &GenericSizedElementSpec, L"SCROLLBAR",
+    	SBP_ARROWBTN, leftarrow_statemap, NOPAD,
+	(SM_CXHSCROLL << 8) | SM_CYHSCROLL },
+    { "Scrollbar.rightarrow", &GenericSizedElementSpec, L"SCROLLBAR",
+    	SBP_ARROWBTN, rightarrow_statemap, NOPAD,
+	(SM_CXHSCROLL << 8) | SM_CYHSCROLL },
     { "Horizontal.Scale.slider", &GenericElementSpec, L"TRACKBAR",
     	TKP_THUMB, scale_statemap, NOPAD, 0 },
     { "Vertical.Scale.slider", &GenericElementSpec, L"TRACKBAR",
@@ -1037,14 +1014,7 @@ MODULE_SCOPE int TtkXPTheme_Init(Tcl_Interp *interp, HWND hwnd)
     /*
      * Layouts:
      */
-    Ttk_RegisterLayout(themePtr, "TButton", ButtonLayout);
-    Ttk_RegisterLayout(themePtr, "TMenubutton", MenubuttonLayout);
-    Ttk_RegisterLayout(themePtr, "Vertical.TScrollbar",
-    	VerticalScrollbarLayout);
-    Ttk_RegisterLayout(themePtr, "Horizontal.TScrollbar",
-    	HorizontalScrollbarLayout);
-    Ttk_RegisterLayout(themePtr, "Vertical.TScale", VerticalScaleLayout);
-    Ttk_RegisterLayout(themePtr, "Horizontal.TScale", HorizontalScaleLayout);
+    Ttk_RegisterLayouts(themePtr, LayoutTable);
 
     Tcl_PkgProvide(interp, "ttk::theme::xpnative", TTK_VERSION);
 

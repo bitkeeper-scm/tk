@@ -15,7 +15,6 @@
  */
 
 #include "default.h"
-#include "tkPort.h"
 #include "tkInt.h"
 
 /*
@@ -944,10 +943,11 @@ ConfigureFrame(
      * A few of the options require additional processing.
      */
 
-    if (((oldMenuName == NULL) && (framePtr->menuName != NULL))
+    if ((((oldMenuName == NULL) && (framePtr->menuName != NULL))
 	    || ((oldMenuName != NULL) && (framePtr->menuName == NULL))
 	    || ((oldMenuName != NULL) && (framePtr->menuName != NULL)
-	    && strcmp(oldMenuName, framePtr->menuName) != 0)) {
+	    && strcmp(oldMenuName, framePtr->menuName) != 0))
+	&& framePtr->type == TYPE_TOPLEVEL) {
 	TkSetWindowMenuBar(interp, framePtr->tkwin, oldMenuName,
 		framePtr->menuName);
     }
@@ -1427,6 +1427,7 @@ DisplayFrame(
 	    goto noLabel;
 	}
 
+#ifndef TK_NO_DOUBLE_BUFFERING
 	/*
 	 * In order to avoid screen flashes, this function redraws the frame
 	 * into off-screen memory, then copies it back on-screen in a single
@@ -1436,6 +1437,9 @@ DisplayFrame(
 
 	pixmap = Tk_GetPixmap(framePtr->display, Tk_WindowId(tkwin),
 		Tk_Width(tkwin), Tk_Height(tkwin), Tk_Depth(tkwin));
+#else
+	pixmap = Tk_WindowId(tkwin);
+#endif /* TK_NO_DOUBLE_BUFFERING */
 
 	/*
 	 * Clear the pixmap.
@@ -1549,6 +1553,7 @@ DisplayFrame(
 	}
 
 
+#ifndef TK_NO_DOUBLE_BUFFERING
 	/*
 	 * Everything's been redisplayed; now copy the pixmap onto the screen
 	 * and free up the pixmap.
@@ -1560,6 +1565,7 @@ DisplayFrame(
 		(unsigned) (Tk_Height(tkwin) - 2 * hlWidth),
 		hlWidth, hlWidth);
 	Tk_FreePixmap(framePtr->display, pixmap);
+#endif /* TK_NO_DOUBLE_BUFFERING */
     }
 
 }
@@ -1903,6 +1909,33 @@ FrameLostSlaveProc(
 	labelframePtr->labelWin = NULL;
     }
     FrameWorldChanged((ClientData) framePtr);
+}
+
+void
+TkMapTopFrame (tkwin)
+     Tk_Window tkwin;
+{
+    Frame *framePtr = ((TkWindow*)tkwin)->instanceData;
+    Tk_OptionTable optionTable;
+    if (Tk_IsTopLevel(tkwin) && framePtr->type == TYPE_FRAME) {
+	framePtr->type = TYPE_TOPLEVEL;
+	Tcl_DoWhenIdle(MapFrame, (ClientData)framePtr);
+	if (framePtr->menuName != NULL) {
+	    TkSetWindowMenuBar(framePtr->interp, framePtr->tkwin, NULL,
+			       framePtr->menuName);
+	}
+    } else if (!Tk_IsTopLevel(tkwin) && framePtr->type == TYPE_TOPLEVEL) {
+	framePtr->type = TYPE_FRAME;
+    } else {
+	/* Not a frame or toplevel, skip it */
+	return;
+    }
+    /*
+     * The option table has already been created so 
+     * the cached pointer will be returned.
+     */
+    optionTable = Tk_CreateOptionTable(framePtr->interp, optionSpecs[framePtr->type]);
+    framePtr->optionTable = optionTable;
 }
 
 /*

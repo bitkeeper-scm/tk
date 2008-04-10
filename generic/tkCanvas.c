@@ -19,8 +19,12 @@
 
 #include "default.h"
 #include "tkInt.h"
-#include "tkPort.h"
 #include "tkCanvas.h"
+#ifdef TK_NO_DOUBLE_BUFFERING
+#ifdef MAC_OSX_TK
+#include "tkMacOSXInt.h"
+#endif
+#endif /* TK_NO_DOUBLE_BUFFERING */
 
 /*
  * See tkCanvas.h for key data structures used to implement canvases.
@@ -177,10 +181,10 @@ static Tk_ConfigSpec configSpecs[] = {
 	TK_CONFIG_MONO_ONLY},
     {TK_CONFIG_COLOR, "-selectforeground", "selectForeground", "Background",
 	DEF_CANVAS_SELECT_FG_COLOR, Tk_Offset(TkCanvas, textInfo.selFgColorPtr),
-	TK_CONFIG_COLOR_ONLY},
+	TK_CONFIG_COLOR_ONLY|TK_CONFIG_NULL_OK},
     {TK_CONFIG_COLOR, "-selectforeground", "selectForeground", "Background",
 	DEF_CANVAS_SELECT_FG_MONO, Tk_Offset(TkCanvas, textInfo.selFgColorPtr),
-	TK_CONFIG_MONO_ONLY},
+	TK_CONFIG_MONO_ONLY|TK_CONFIG_NULL_OK},
     {TK_CONFIG_CUSTOM, "-state", "state", "State",
 	"normal", Tk_Offset(TkCanvas, canvas_state), TK_CONFIG_DONT_SET_DEFAULT,
 	&stateOption},
@@ -681,7 +685,8 @@ CanvasWidgetCmd(
 	if (searchPtr->type == SEARCH_TYPE_ID) {
 	    Tcl_HashEntry *entryPtr;
 
-	    entryPtr = Tcl_FindHashEntry(&canvasPtr->idTable, (char *) searchPtr->id);
+	    entryPtr = Tcl_FindHashEntry(&canvasPtr->idTable,
+		    (char *) INT2PTR(searchPtr->id));
 	    if (entryPtr != NULL) {
 		itemPtr = (Tk_Item *) Tcl_GetHashValue(entryPtr);
 		object = (ClientData) itemPtr;
@@ -986,7 +991,7 @@ CanvasWidgetCmd(
 	}
 	itemPtr->nextPtr = NULL;
 	entryPtr = Tcl_CreateHashEntry(&canvasPtr->idTable,
-		(char *) itemPtr->id, &isNew);
+		(char *) INT2PTR(itemPtr->id), &isNew);
 	Tcl_SetHashValue(entryPtr, itemPtr);
 	itemPtr->prevPtr = canvasPtr->lastItemPtr;
 	canvasPtr->hotPtr = itemPtr;
@@ -1085,7 +1090,7 @@ CanvasWidgetCmd(
 		    ckfree((char *) itemPtr->tagPtr);
 		}
 		entryPtr = Tcl_FindHashEntry(&canvasPtr->idTable,
-			(char *) itemPtr->id);
+			(char *) INT2PTR(itemPtr->id));
 		Tcl_DeleteHashEntry(entryPtr);
 		if (itemPtr->nextPtr != NULL) {
 		    itemPtr->nextPtr->prevPtr = itemPtr->prevPtr;
@@ -2132,6 +2137,10 @@ DisplayCanvas(
 	    goto borders;
 	}
 
+	width = screenX2 - screenX1;
+	height = screenY2 - screenY1;
+
+#ifndef TK_NO_DOUBLE_BUFFERING
 	/*
 	 * Redrawing is done in a temporary pixmap that is allocated here and
 	 * freed at the end of the function. All drawing is done to the
@@ -2166,13 +2175,18 @@ DisplayCanvas(
 	    (screenX2 + 30 - canvasPtr->drawableXOrigin),
 	    (screenY2 + 30 - canvasPtr->drawableYOrigin),
 	    Tk_Depth(tkwin));
+#else
+	canvasPtr->drawableXOrigin = canvasPtr->xOrigin;
+	canvasPtr->drawableYOrigin = canvasPtr->yOrigin;
+	pixmap = Tk_WindowId(tkwin);
+	TkpClipDrawableToRect(Tk_Display(tkwin), pixmap,
+		screenX1 - canvasPtr->xOrigin, screenY1 - canvasPtr->yOrigin,
+		width, height);
+#endif /* TK_NO_DOUBLE_BUFFERING */
 
 	/*
 	 * Clear the area to be redrawn.
 	 */
-
-	width = screenX2 - screenX1;
-	height = screenY2 - screenY1;
 
 	XFillRectangle(Tk_Display(tkwin), pixmap, canvasPtr->pixmapGC,
 		screenX1 - canvasPtr->drawableXOrigin,
@@ -2211,6 +2225,7 @@ DisplayCanvas(
 		    height);
 	}
 
+#ifndef TK_NO_DOUBLE_BUFFERING
 	/*
 	 * Copy from the temporary pixmap to the screen, then free up the
 	 * temporary pixmap.
@@ -2220,10 +2235,12 @@ DisplayCanvas(
 		canvasPtr->pixmapGC,
 		screenX1 - canvasPtr->drawableXOrigin,
 		screenY1 - canvasPtr->drawableYOrigin,
-		(unsigned) (screenX2 - screenX1),
-		(unsigned) (screenY2 - screenY1),
+		(unsigned int) width, (unsigned int) height,
 		screenX1 - canvasPtr->xOrigin, screenY1 - canvasPtr->yOrigin);
 	Tk_FreePixmap(Tk_Display(tkwin), pixmap);
+#else
+	TkpClipDrawableToRect(Tk_Display(tkwin), pixmap, 0, 0, -1, -1);
+#endif /* TK_NO_DOUBLE_BUFFERING */
     }
 
     /*
@@ -3610,7 +3627,7 @@ TagSearchFirst(
 	if ((itemPtr == NULL) || (itemPtr->id != searchPtr->id)
 		|| (lastPtr == NULL) || (lastPtr->nextPtr != itemPtr)) {
 	    entryPtr = Tcl_FindHashEntry(&searchPtr->canvasPtr->idTable,
-		    (char *) searchPtr->id);
+		    (char *) INT2PTR(searchPtr->id));
 	    if (entryPtr != NULL) {
 		itemPtr = (Tk_Item *)Tcl_GetHashValue(entryPtr);
 		lastPtr = itemPtr->prevPtr;
@@ -3835,10 +3852,10 @@ DoItem(
 	Tk_Uid *newTagPtr;
 
 	itemPtr->tagSpace += 5;
-	newTagPtr = (Tk_Uid *) ckalloc((unsigned)
-		(itemPtr->tagSpace * sizeof(Tk_Uid)));
-	memcpy((VOID *) newTagPtr, (VOID *) itemPtr->tagPtr,
-		(itemPtr->numTags * sizeof(Tk_Uid)));
+	newTagPtr = (Tk_Uid *)
+		ckalloc((unsigned) (itemPtr->tagSpace * sizeof(Tk_Uid)));
+	memcpy((void *) newTagPtr, itemPtr->tagPtr,
+		itemPtr->numTags * sizeof(Tk_Uid));
 	if (itemPtr->tagPtr != itemPtr->staticTagSpace) {
 	    ckfree((char *) itemPtr->tagPtr);
 	}

@@ -11,7 +11,6 @@
  * RCS: @(#) $Id$
  */
 
-#include "tkPort.h"
 #include "tkInt.h"
 
 /*
@@ -494,7 +493,7 @@ CreateCursorFromTableOrFile(
      * If there is no mask data, then create the cursor now.
      */
 
-    if ((!inTkTable && (argc == 2)) || (tkCursorPtr->mask == NULL)) {
+    if ((!inTkTable && (argc == 2)) || (inTkTable && tkCursorPtr->mask == NULL)) {
 	cursor = XCreatePixmapCursor(display, source, source,
 		&fg, &fg, (unsigned) xHot, (unsigned) yHot);
 	goto cleanup;
@@ -533,7 +532,7 @@ CreateCursorFromTableOrFile(
 	}
     }
 
-    if ((maskWidth != width) && (maskHeight != height)) {
+    if ((maskWidth != width) || (maskHeight != height)) {
 	Tcl_SetResult(interp, "source and mask bitmaps have different sizes",
 		TCL_STATIC);
 	goto cleanup;
