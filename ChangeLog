@@ -1,5 +1,16 @@
 2008-08-25  Donal K. Fellows  <dkf@users.sf.net>
 
+	* generic/tkImgPhoto.c (ImgPhotoConfigureMaster): Ensure that uses of
+	TclStackAlloc and TclStackFree balance.
+
+2008-08-25  Todd M. Helfter <tmh@users.sourceforge.net>
+
+	* library/tkfbox.tcl: Fix the multiple selection error for
+	tk_getOpenFile -multiple 1 which fails on all unix platforms since the
+	adoption of ttk widgets. [Bug 1936220]
+
+2008-08-25  Donal K. Fellows  <dkf@users.sf.net>
+
 	* generic/tkImgPhoto.c:	     Split the implementation of the core of
 	* generic/tkImgPhoto.h:	     photo images into two pieces, the photo
 	* generic/tkImgPhInstance.c: master (which manages the data model and
