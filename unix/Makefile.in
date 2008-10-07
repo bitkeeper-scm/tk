@@ -323,7 +323,7 @@ endif
 # should be installed (symlinks, compression, package name suffix).
 MAN_FLAGS               = @MAN_FLAGS@
 
-CC			= @CC@
+CC			= $(if $(Q), @echo CC $(notdir $<) ; @CC@, @CC@)
 
 CC_SWITCHES_NO_STUBS = ${CFLAGS} ${CFLAGS_WARNING} ${SHLIB_CFLAGS} \
 -I${UNIX_DIR} -I${GENERIC_DIR} -I${BMAP_DIR} -I${TCL_GENERIC_DIR} \

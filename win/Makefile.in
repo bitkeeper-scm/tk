@@ -182,7 +182,7 @@ MAN2TCLFLAGS	= @MAN2TCLFLAGS@
 
 AR		= @AR@
 RANLIB		= @RANLIB@
-CC		= @CC@
+CC		= $(if $(Q), @echo CC $(notdir $<) ; @CC@, @CC@)
 RC		= @RC@
 RES		= @RES@
 TK_RES		= @TK_RES@
