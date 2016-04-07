@@ -1,0 +1,9 @@
+*.o
+*.a
+*.so
+unix/Makefile
+unix/config.log
+unix/config.status
+unix/tk.pc
+unix/tkConfig.sh
+unix/wish
